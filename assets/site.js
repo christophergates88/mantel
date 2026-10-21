@@ -1,4 +1,4 @@
-// Torvard website: the live assistant in the phone, the in-browser leak finder, the proof counters and the lamp.
+// Cason website: the live assistant in the phone, the in-browser leak finder, the proof counters and the lamp.
 // Everything here runs in the visitor's browser. The page's security policy (connect-src 'none') means it
 // couldn't send what they type or open even if it tried.
 
@@ -37,7 +37,7 @@ function icon(name) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The phone: ask the Riveras' Torvard anything
+// The phone: ask the Riveras' Cason anything
 
 const ICONS = { check: 'check', card: 'card', repeat: 'repeat', doc: 'doc', cal: 'cal', hourglass: 'hourglass', home: 'home', phone: 'phone', lock: 'lock' };
 
@@ -362,7 +362,7 @@ function setupStoreLinks() {
     button.replaceWith(link);
   }
   const lede = document.querySelector('#get .lede');
-  if (lede) lede.textContent = 'Torvard for iPhone is free to download. Premium is optional.';
+  if (lede) lede.textContent = 'Cason for iPhone is free to download. Premium is optional.';
 }
 
 setupAsk();

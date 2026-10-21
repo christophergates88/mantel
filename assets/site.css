@@ -1,8 +1,8 @@
-/* Torvard website. One page that runs from morning to night: each section's sky is a little later in the day,
+/* Cason website. One page that runs from morning to night: each section's sky is a little later in the day,
    and the lamp in the window comes on at the end. Colors match the app. */
 
 @font-face {
-  font-family: "Nunito Torvard";
+  font-family: "Nunito Cason";
   src: url("fonts/nunito-display.woff") format("woff");
   font-weight: 600 900;
   font-display: swap;
@@ -23,7 +23,7 @@
   --night-2: #1d1748;
   --moss: #13866a;
   --rust: #d3433a;
-  --display: ui-rounded, "SF Pro Rounded", "Nunito Torvard", "Nunito", system-ui, sans-serif;
+  --display: ui-rounded, "SF Pro Rounded", "Nunito Cason", "Nunito", system-ui, sans-serif;
   --text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --radius: 22px;
   --gutter: clamp(16px, 5vw, 40px);
@@ -165,7 +165,7 @@ p { margin: 0; text-wrap: pretty; }
 @keyframes pulse { to { box-shadow: 0 0 0 9px color-mix(in srgb, var(--moss) 0%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
 
-/* ---------- The iPhone with Torvard's assistant, live ---------- */
+/* ---------- The iPhone with Cason's assistant, live ---------- */
 
 .device {
   width: min(360px, 100%); margin-inline: auto; padding: 11px; border-radius: 56px;
@@ -185,7 +185,7 @@ p { margin: 0; text-wrap: pretty; }
 .statusbar .battery { position: relative; width: 24px; height: 12px; border-radius: 4px; border: 1.5px solid rgba(18, 18, 32, 0.45); padding: 1.5px; }
 .statusbar .battery::before { content: ""; display: block; height: 100%; border-radius: 2px; background: #121220; }
 .statusbar .battery::after { content: ""; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; border-radius: 0 1px 1px 0; background: rgba(18, 18, 32, 0.45); }
-/* The assistant inside the phone: Torvard at night. */
+/* The assistant inside the phone: Cason at night. */
 .ask-screen { background: #0b0920; color: #f2f0ff; height: 640px; min-height: 0; display: flex; flex-direction: column;
   background-image: radial-gradient(120% 60% at 50% 0%, rgba(43, 31, 120, 0.95), transparent 70%), radial-gradient(80% 50% at 100% 100%, rgba(90, 53, 80, 0.4), transparent 70%); }
 .ask-screen .statusbar { color: #fff; flex: none; }

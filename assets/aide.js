@@ -1,4 +1,4 @@
-// Torvard's assistant, for the website demo. The same rules as the app's on-device assistant, answering from an
+// Cason's assistant, for the website demo. The same rules as the app's on-device assistant, answering from an
 // example household (the Riveras). Runs in the visitor's browser; nothing is sent anywhere.
 
 import { parseCapture, formatMoney, startOfDay, addDays, daysBetween, KIND_LABELS } from './engine.js';

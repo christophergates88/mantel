@@ -1,4 +1,4 @@
-// /get (the QR code's address): go straight to the App Store once Torvard is live.
+// /get (the QR code's address): go straight to the App Store once Cason is live.
 import { APP_STORE_URL } from './config.js';
 
 if (APP_STORE_URL) {
