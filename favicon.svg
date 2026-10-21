@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><clipPath id="r"><rect width="1024" height="1024" rx="230"/></clipPath>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7A5CFF"/>
+      <stop offset="0.55" stop-color="#5636EC"/>
+      <stop offset="1" stop-color="#2F17B8"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.18" cy="0.08" r="0.75">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="lamp" cx="0.5000" cy="0.5252" r="0.30">
+      <stop offset="0" stop-color="#FFC15C" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFC15C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="house" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EEEAFF"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18.4" stdDeviation="22.5" flood-color="#1B0B6E" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <g clip-path="url(#r)"><rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#sheen)"/>
+  <g filter="url(#soft)">
+    <path fill="url(#house)" fill-rule="evenodd" d="M488.89 242.14 A36.50 36.50 0 0 1 535.11 242.14 L741.92 411.35 A36.50 36.50 0 0 1 755.30 439.59 L755.30 735.39 A29.20 29.20 0 0 1 716.69 763.03 L517.89 695.26 A18.25 18.25 0 0 0 506.11 695.26 L307.31 763.03 A29.20 29.20 0 0 1 268.70 735.39 L268.70 439.59 A36.50 36.50 0 0 1 282.08 411.35 Z M477.94 472.06 L546.06 472.06 A31.63 31.63 0 0 1 577.69 503.69 L577.69 571.82 A31.63 31.63 0 0 1 546.06 603.45 L477.94 603.45 A31.63 31.63 0 0 1 446.31 571.82 L446.31 503.69 A31.63 31.63 0 0 1 477.94 472.06 Z"/>
+  </g>
+  <circle cx="512.00" cy="537.76" r="204.8" fill="url(#lamp)"/>
+  <rect x="465.77" y="491.53" width="92.45" height="92.45" rx="19.46" fill="#FFC15C"/>
+</g></svg>

@@ -1,164 +1,284 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mantel: the private home for your household</title>
-  <meta name="description" content="Bills, subscriptions, documents, home upkeep and an emergency binder, kept on your iPhone. No account, no bank login, no ads, no tracking.">
-  <meta property="og:title" content="Mantel: the private home for your household">
-  <meta property="og:description" content="Find forgotten subscriptions without a bank login. Never miss a renewal. Hand your family an emergency binder. All on your iPhone.">
-  <meta property="og:image" content="icon-512.png">
-  <link rel="icon" href="favicon-64.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'self'">
+<meta name="referrer" content="no-referrer">
+<title>Homesake: your household, kept private</title>
+<meta name="description" content="Homesake keeps your household's bills, documents, upkeep, home history and family records on your iPhone. No account, no servers. Try the money-leak finder right on this page.">
+<meta name="theme-color" content="#f4f4f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b12" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Homesake">
+<meta property="og:title" content="Homesake: your household, kept private">
+<meta property="og:description" content="Bills, documents, upkeep and family records on your iPhone. No account, no servers.">
+<meta property="og:image" content="https://homesake.app/assets/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="module" src="assets/site.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <header class="site">
-      <a class="brand" href="./"><img src="icon-512.png" alt="">Mantel</a>
-      <nav>
-        <a href="#privacy">Privacy</a>
-        <a href="#pricing">Pricing</a>
-        <a href="support.html">Help</a>
-      </nav>
-    </header>
+<a class="skip" href="#main">Skip to content</a>
 
-    <section class="hero">
-      <div>
-        <div class="eyebrow">For iPhone</div>
-        <h1>The private home for your household.</h1>
-        <p class="lede">Bills, subscriptions, IDs, insurance, home upkeep and family info in one place, with a short brief every morning. All of it stays on your iPhone and in your own backups, where nobody else can see it.</p>
-        <div class="cta">
-          <a class="button" href="https://apps.apple.com/us/search?term=mantel%20household">Download on the App Store</a>
-          <a class="button secondary" href="#features">See what it does</a>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 88 100"><path fill="currentColor" fill-rule="evenodd" d="M39.82 3.42 A6.60 6.60 0 0 1 48.18 3.42 L85.58 34.02 A6.60 6.60 0 0 1 88.00 39.13 L88.00 92.62 A5.28 5.28 0 0 1 81.02 97.62 L45.06 85.36 A3.30 3.30 0 0 0 42.94 85.36 L6.98 97.62 A5.28 5.28 0 0 1 0.00 92.62 L0.00 39.13 A6.60 6.60 0 0 1 2.42 34.02 Z M37.84 45.00 L50.16 45.00 A5.72 5.72 0 0 1 55.88 50.72 L55.88 63.04 A5.72 5.72 0 0 1 50.16 68.76 L37.84 68.76 A5.72 5.72 0 0 1 32.12 63.04 L32.12 50.72 A5.72 5.72 0 0 1 37.84 45.00 Z"/><rect x="35.64" y="48.52" width="16.72" height="16.72" rx="3.52" fill="#FFC15C"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h3"/></g></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5a7.5 7.5 0 0 1 13.2-4.9L19.5 9M19.5 4.5V9H15M20 12.5a7.5 7.5 0 0 1-13.2 4.9L4.5 15M4.5 19.5V15H9"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.4l2.7 2.7L16.2 9.6"/></g></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></g></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g></symbol>
+  <symbol id="i-dollar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.6 9.3c-.5-1-1.5-1.6-2.7-1.6-1.5 0-2.6.8-2.6 2s1 1.7 2.7 2.1c1.8.4 2.8 1 2.8 2.3s-1.2 2.1-2.8 2.1c-1.3 0-2.4-.6-2.9-1.7M12 6v1.7M12 16.2V18"/></g></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5v9a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></g></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10M7 21h10M8 3c0 4.5 8 5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5-8 9s8 4.5 8 9"/></g></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></g></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></g></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A9.7 9.7 0 0 1 12 5c5 0 8.8 4.4 9.8 7-.4 1-1.3 2.4-2.6 3.7M6.3 6.4C4.4 7.7 2.9 9.7 2.2 12c1 2.6 4.8 7 9.8 7 1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></g></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 4l9 5.5M5 10.5v7.5M9.7 10.5v7.5M14.3 10.5v7.5M19 10.5v7.5M3 20.5h18"/></g></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></g></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></g></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9 5-9 5-9-5zM3 13l9 5 9-5"/></g></symbol>
+</svg>
+
+<header class="top">
+  <a class="brand" href="./" aria-label="Homesake, home page"><svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>Homesake</a>
+  <nav aria-label="On this page">
+    <a href="#leaks">Leak finder</a>
+    <a href="#private">Privacy</a>
+    <a href="#pricing">Pricing</a>
+    <a href="support.html">Help</a>
+  </nav>
+  <a class="pill" href="#get" data-get>Get the app</a>
+</header>
+
+<main id="main">
+
+  <!-- Morning -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <h1 id="hero-title">Your household, kept.</h1>
+        <p class="lede">Bills, papers, upkeep and the people you love, in one private app on your iPhone. No account and no servers, and it gets more useful every year you keep it.</p>
+        <div class="hero-actions">
+          <a class="pill" href="#get" data-get>Get Homesake</a>
+          <span class="note">Free for iPhone. Premium is optional.</span>
         </div>
-        <p class="note">Free to start. Premium from $39.99 a year, or $99.99 once. One purchase covers your family.</p>
-      </div>
-      <div class="phone" aria-label="Example of Mantel's daily brief">
-        <div class="label">Your brief</div>
-        <div class="brief">Your Peacock trial ends Thursday; it turns into $10.99 a month unless you cancel. Three things today, starting with the HVAC filter. Alex's license expires in 40 days.</div>
-        <div class="lock"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M7 10V7.5a5 5 0 0 1 10 0V10h.5A1.5 1.5 0 0 1 19 11.5v8A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5v-8A1.5 1.5 0 0 1 6.5 10zm2 0h6V7.5a3 3 0 0 0-6 0z"/></svg> Written on this iPhone</div>
-        <div style="margin-top:16px">
-          <div class="row"><span>Electric company</span><span>$142.18 · Thu</span></div>
-          <div class="row"><span>Netflix went up $2.50</span><span>$17.99/mo</span></div>
-          <div class="row"><span>Home insurance renews</span><span>in 25 days</span></div>
-          <div class="row"><span>Sam's birthday</span><span>Turns 4</span></div>
+        <div class="try-block">
+          <p class="try-hint">The phone works. Type into it, or tap an example:</p>
+          <div class="examples" id="examples">
+            <button class="chip" type="button">Passport expires March 2029</button>
+            <button class="chip" type="button">Car insurance $164 every month on the 3rd</button>
+            <button class="chip" type="button">Mom's birthday June 3</button>
+            <button class="chip" type="button">Spotify $11.99 monthly</button>
+          </div>
+          <p class="proof"><span class="pulse" aria-hidden="true"></span><span><strong id="proof-line">Nothing you type here leaves this page.</strong> It's read by code running in your browser. <a href="#how">How we know</a></span></p>
         </div>
       </div>
-    </section>
-  </div>
 
-  <div class="wrap">
-    <section class="band shots" aria-label="Screens from the app">
-      <div class="eyebrow">A look inside</div>
-      <h2>Calm on the surface. Thorough underneath.</h2>
-      <div class="shots-row">
-        <figure><img src="img/today.jpg" width="540" height="1173" loading="lazy" alt="Today screen: a short morning brief, today's tasks and the bills due this week."><figcaption>The morning brief</figcaption></figure>
-        <figure><img src="img/leaks.jpg" width="540" height="1173" loading="lazy" alt="Money-leak finder: nine recurring charges, a Netflix price increase and overlapping streaming services."><figcaption>The money-leak finder</figcaption></figure>
-        <figure><img src="img/vault.jpg" width="540" height="1173" loading="lazy" alt="Vault: the Emergency Binder, IDs with expiration dates, and insurance policies."><figcaption>The Vault</figcaption></figure>
-        <figure><img src="img/binder.jpg" width="540" height="1173" loading="lazy" alt="Emergency Binder: what goes into the locked PDF for your family."><figcaption>The Emergency Binder</figcaption></figure>
-      </div>
-    </section>
-  </div>
-
-  <section class="band dark" id="privacy">
-    <div class="wrap">
-      <div class="eyebrow">Nobody else's business</div>
-      <h2>We can't leak what we never have.</h2>
-      <p style="max-width:44em">Most life apps keep your records on their servers, link your bank through a middleman, and run your data past someone's AI. Breaches of companies holding ID photos and financial data keep coming. Mantel is built the other way around.</p>
-      <div class="grid">
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></div><h3>On your iPhone only</h3><p>No account, no sign-up, no cloud of ours. iOS encrypts your records and seals them whenever the phone is locked.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg></div><h3>No ads, no trackers</h3><p>There's no analytics or advertising code in the app. The App Store label reads "Data Not Collected."</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5L12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20.5h18"/></svg></div><h3>No bank login</h3><p>The money-leak finder reads a statement file you pick, on your phone, then forgets it.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div><h3>AI that stays home</h3><p>On iPhones with Apple Intelligence, the brief and Ask run on the device. Nothing goes to an AI company.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></div><h3>Check it yourself</h3><p>Turn on App Privacy Report in iPhone Settings. Mantel shouldn't show up contacting any servers.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9"/><path d="M10 13h4"/></svg></div><h3>Your data outlives us</h3><p>If Mantel ever went away, nothing would be deleted. Locked backups and spreadsheet exports are yours to keep.</p></div>
+      <div class="hero-device">
+        <div class="device">
+          <div class="device-screen">
+            <div class="device-island" aria-hidden="true"></div>
+            <div class="statusbar" aria-hidden="true"><span>9:41</span><span class="icons"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="battery"></span></span></div>
+            <div class="sheet">
+              <div class="sheet-bar" aria-hidden="true"><span class="cancel">Cancel</span><span class="title">Add anything</span><span class="add" id="add-count">Add 3</span></div>
+              <label class="visually-hidden" for="quick">Type things to add, one per line</label>
+              <textarea id="quick" rows="4" spellcheck="false" autocomplete="off">Water bill $64 on the 15th every month
+Netflix trial ends Friday $15.49
+Change HVAC filter every 3 months</textarea>
+              <p class="will-add" id="will-add" aria-live="polite">Homesake will add 3 things</p>
+              <ol class="parsed" id="parsed"></ol>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <div class="wrap">
-    <section class="band" id="features">
-      <div class="eyebrow">What it does</div>
-      <h2>Everything a household keeps track of, kept in one place.</h2>
-      <div class="grid">
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></svg></div><h3>A morning brief</h3><p>What's due, what's overdue, trials about to charge, renewals coming up, birthdays and today's calendar, in a few plain sentences.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/><path d="M10.5 7.5v6M12.3 8.6c-.4-.6-1-.9-1.8-.9-1 0-1.8.6-1.8 1.4 0 1.9 3.6 1 3.6 2.9 0 .8-.8 1.4-1.8 1.4-.8 0-1.5-.4-1.8-1"/></svg></div><h3>Money-leak finder</h3><p>Open a bank or card statement and see every subscription, price increase and overlapping service, with links to cancel. No cut of your savings.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3h11M6.5 21h11"/><path d="M7.5 3c0 4.5 4.5 5.5 4.5 9s-4.5 4.5-4.5 9M16.5 3c0 4.5-4.5 5.5-4.5 9s4.5 4.5 4.5 9"/></svg></div><h3>Trial guard</h3><p>Reminders two days and one day before a free trial turns into a charge.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.5 1.7-2.2 3-2.2s2.4.7 3 2.2M14 10h4.5M14 13.5h3"/></svg></div><h3>Smart Scan</h3><p>Scan a license, passport, insurance card or warranty. Mantel reads the dates and numbers on the phone and reminds you before anything expires.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.2 5.2L3.5 17.5a1.4 1.4 0 0 0 0 2l1 1a1.4 1.4 0 0 0 2 0l6-6a4 4 0 0 0 5.2-5.2l-2.6 2.6-2-2z"/></svg></div><h3>Home upkeep</h3><p>Filters, smoke alarms, gutters and the water heater on a schedule that counts from when you actually did the job. Warranties and model numbers too.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/><path d="M9 7.5h6"/></svg></div><h3>Emergency Binder</h3><p>One password-locked PDF with policies, claims numbers, accounts, documents, medical info, contacts and wishes, for the day your family needs it.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></div><h3>Add anything</h3><p>Type or say "Water bill $64 on the 15th every month" and Mantel files it. Siri can add things too, and widgets keep what's due on your Home and Lock Screen.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></div><h3>Insurance, organized</h3><p>Policy numbers, deductibles, renewal dates, your agent and the claims line, all in one tap when something happens.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></svg></div><h3>Income and side gigs</h3><p>Track paychecks and side income, and how much to set aside for taxes, with quarterly reminders.</p></div>
+  <!-- Late morning -->
+  <section class="leaks" id="leaks" aria-labelledby="leaks-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="leaks-title">What are you still paying for?</h2>
+        <p class="lede">Open a bank or card statement and see every charge that repeats, the ones that went up, and the services you pay for twice. It works right here, and the file never leaves this tab.</p>
       </div>
-    </section>
 
-    <section class="band">
-      <div class="eyebrow">How it compares</div>
-      <h2>The same help, without handing over your life.</h2>
-      <table class="compare">
-        <thead><tr><th></th><th>Mantel</th><th>Typical budgeting and family apps</th></tr></thead>
-        <tbody>
-          <tr><td>Account required</td><td class="yes">No</td><td class="no">Yes</td></tr>
-          <tr><td>Bank login to find subscriptions</td><td class="yes">Never</td><td class="no">Usually</td></tr>
-          <tr><td>Your records on the company's servers</td><td class="yes">No</td><td class="no">Yes</td></tr>
-          <tr><td>Ads or tracking code</td><td class="yes">None</td><td class="no">Often</td></tr>
-          <tr><td>AI sends your data off the phone</td><td class="yes">No</td><td class="no">Often</td></tr>
-          <tr><td>Fee taken from money you save</td><td class="yes">No</td><td class="no">Some take 35–60%</td></tr>
-          <tr><td>Price</td><td class="yes">Free, or $39.99/yr, or $99.99 once</td><td>Often $40–$120 a year</td></tr>
-        </tbody>
-      </table>
-    </section>
+      <div class="scanner" id="scanner">
+        <div class="glyph" aria-hidden="true"><svg><use href="#i-file"/></svg></div>
+        <h3>Drop a statement here</h3>
+        <p class="muted small">A CSV or OFX file from your bank's or card's website, ideally two or three months of transactions.</p>
+        <div class="buttons">
+          <label class="pill file-label">Choose a file<input type="file" id="statement" accept=".csv,.ofx,.qfx,.tsv,.txt,text/csv"></label>
+          <button class="pill ghost" type="button" id="use-example">Use an example statement</button>
+        </div>
+      </div>
+      <p class="scan-error" id="scan-error" role="alert" hidden></p>
 
-    <section class="band" id="pricing">
-      <div class="eyebrow">Pricing</div>
-      <h2>Start free. Upgrade when it's earned it.</h2>
-      <div class="pricing">
-        <div class="card">
+      <div class="report" id="report" hidden>
+        <div class="report-top">
+          <div class="total">
+            <p class="eyebrow" id="total-count"></p>
+            <p class="big" id="total-month"></p>
+            <p id="total-detail"></p>
+          </div>
+          <div class="insights" id="insights"></div>
+        </div>
+        <ul class="charges" id="charges"></ul>
+        <div class="report-cta">
+          <a class="pill" href="#get" data-get>Watch them every month in Homesake</a>
+          <span class="muted small">The app reminds you before each renewal and free trial, and keeps what you save.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Afternoon into evening -->
+  <section class="day" aria-labelledby="day-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="day-title">One app for the whole day of a household.</h2>
+      </div>
+      <ol class="moments">
+        <li class="moment">
+          <div class="moment-copy">
+            <time datetime="07:02">7:02 AM</time>
+            <h3>A brief before coffee.</h3>
+            <p>What's due, what renews, whose birthday it is, and the one thing you shouldn't forget, in a few sentences. Written on your iPhone, by your iPhone.</p>
+          </div>
+          <div class="shot"><img src="assets/img/today.webp" width="640" height="1391" loading="lazy" alt="Homesake's Today screen with a short written brief about bills, a free trial and a warranty"></div>
+        </li>
+        <li class="moment">
+          <div class="moment-copy">
+            <time datetime="12:40">12:40 PM</time>
+            <h3>Every card and document, found in a second.</h3>
+            <p>Licenses, passports, insurance cards and warranties, scanned once. Homesake reads the expiration dates and reminds you before they run out.</p>
+          </div>
+          <div class="shot"><img src="assets/img/vault.webp" width="640" height="1391" loading="lazy" alt="The Vault screen listing a warranty, a driver's license and a passport with their expiration dates"></div>
+        </li>
+        <li class="moment">
+          <div class="moment-copy">
+            <time datetime="18:15">6:15 PM</time>
+            <h3>Money, without a bank login.</h3>
+            <p>Bills, subscriptions and income on one screen: what's due this week and what you pay every month. Nobody gets the keys to your bank.</p>
+          </div>
+          <div class="shot"><img src="assets/img/money.webp" width="640" height="1391" loading="lazy" alt="The Money screen showing monthly totals and the bills coming due"></div>
+        </li>
+        <li class="moment">
+          <div class="moment-copy">
+            <time datetime="21:30">9:30 PM</time>
+            <h3>The house's whole story.</h3>
+            <p>The new roof, the heat pump, the paint color in the kitchen, who did the work and what it cost. One tap turns it into a home report for a buyer or an insurer.</p>
+          </div>
+          <div class="shot"><img src="assets/img/history.webp" width="640" height="1391" loading="lazy" alt="The Home history screen with projects by year and their costs"></div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Dusk -->
+  <section class="private night" id="private" aria-labelledby="private-title">
+    <div class="wrap">
+      <div class="split">
+        <div>
+          <h2 id="private-title">Here's everything we know about you.</h2>
+          <div class="nothing" role="img" aria-label="An empty box"><div><strong>Nothing.</strong>Homesake has no servers, no accounts, no analytics and no ads. There's nowhere for your life to go.</div></div>
+        </div>
+        <ul class="facts">
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-phone"/></svg></span><div><h3>It all lives on your iPhone.</h3><p>Encrypted by iOS and sealed whenever the phone is locked. Lock the app itself with Face ID if you like.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-bank"/></svg></span><div><h3>No bank login, ever.</h3><p>The leak finder reads a statement file you choose, then forgets it. No middleman holds a key to your money.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></span><div><h3>AI that stays home.</h3><p>On iPhone 15 Pro and newer, Apple Intelligence writes your brief on the phone. Your records never go to an AI company.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-eyeoff"/></svg></span><div><h3>Check it yourself.</h3><p>iPhone's App Privacy Report lists every server each app contacts. Homesake's list stays empty.</p></div></li>
+        </ul>
+      </div>
+
+      <div class="how" id="how">
+        <h3>How this page proves it</h3>
+        <p>The demos above are plain code running in your browser. This page carries a security rule that forbids it from connecting anywhere, so your browser would block it even if it tried:</p>
+        <code>connect-src 'none'; form-action 'none'</code>
+        <div class="counters" aria-live="polite">
+          <span><b id="count-requests">0</b>requests sent by this page since you arrived</span>
+          <span><b id="count-blocked">0</b>blocked attempts</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Evening -->
+  <section class="keep night" aria-labelledby="keep-title">
+    <div class="wrap keep-grid">
+      <div>
+        <h2 id="keep-title">The longer you keep it, the more it's worth.</h2>
+        <ul class="keepsakes">
+          <li><h3>A home report for the day you sell.</h3><p>Every repair, upgrade, warranty and paint color, with who did the work, in one PDF for the buyer, the appraiser or your insurer.</p></li>
+          <li><h3>A health page for every person.</h3><p>Vaccines, medicines, allergies and doctors on one page for a new pediatrician, a school form or the babysitter.</p></li>
+          <li><h3>Your year at home.</h3><p>Each December: what you handled, what you fixed and what you stopped paying for. A small record of a big year.</p></li>
+          <li><h3>An emergency binder.</h3><p>One password-locked PDF with everything your family would need if something happened to you.</p></li>
+        </ul>
+      </div>
+      <div class="shot"><img src="assets/img/year.webp" width="640" height="1391" loading="lazy" alt="The Year at Home screen: 25 things handled this year"></div>
+    </div>
+  </section>
+
+  <!-- Night -->
+  <section class="pricing night" id="pricing" aria-labelledby="pricing-title">
+    <div class="wrap">
+      <h2 id="pricing-title">Free to start. Premium when you want it all.</h2>
+      <div class="plans">
+        <div class="plan">
           <h3>Free</h3>
-          <div class="price">$0</div>
-          <ul class="clean">
-            <li>Daily brief and reminders</li>
-            <li>Unlimited tasks and home upkeep</li>
-            <li>Up to 10 bills and subscriptions</li>
-            <li>Up to 10 documents, 2 insurance policies</li>
-            <li>Household, contacts and emergency notes</li>
-            <li>Face ID lock, widgets, Siri</li>
-            <li>Locked backups and exports, always free</li>
+          <p class="price-note">Everything you need to run the house.</p>
+          <ul>
+            <li>Tasks, reminders and home upkeep</li>
+            <li>The morning brief and widgets</li>
+            <li>Bills, documents and policies to start</li>
+            <li>Face ID lock, Siri, backups and exports</li>
           </ul>
         </div>
-        <div class="card featured">
+        <div class="plan premium">
           <h3>Premium</h3>
-          <div class="price">$39.99<span class="note"> / year</span></div>
-          <p>2 weeks free. Or $5.99 a month, or $99.99 once.</p>
-          <ul class="clean">
-            <li>Money-leak finder with cancel links</li>
-            <li>Emergency Binder PDF</li>
-            <li>Smart Scan for IDs, cards and warranties</li>
-            <li>No limits on anything</li>
-            <li>Income and side-gig tracking</li>
-            <li>Apple Intelligence extras on supported iPhones</li>
-            <li>Family Sharing: covers up to 5 family members</li>
+          <p class="price-note">For the whole household, with Family Sharing.</p>
+          <ul>
+            <li>The money-leak finder</li>
+            <li>Emergency binder, home report and health summaries</li>
+            <li>Smart Scan reads dates off IDs, cards and warranties</li>
+            <li>No limits, income and side gigs, Apple Intelligence extras</li>
           </ul>
+          <div class="prices">
+            <div class="price best"><b>$39.99</b><span>a year, after two free weeks</span></div>
+            <div class="price"><b>$5.99</b><span>a month</span></div>
+            <div class="price"><b>$99.99</b><span>once, for life</span></div>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="band">
-      <h2>Questions</h2>
-      <details><summary>Where is my information stored?</summary><p>Only on your iPhone, inside Mantel's private storage, encrypted by iOS. Mantel has no servers and no accounts, so there's nothing of yours anywhere else we could reach.</p></details>
-      <details><summary>What happens if I lose my phone?</summary><p>If your iPhone's iCloud Backup is on, Mantel comes back with your other apps when you restore. You can also make a password-locked backup file in Settings and keep it wherever you like.</p></details>
-      <details><summary>How does it find subscriptions without my bank?</summary><p>Download a statement from your bank or card (CSV works best; PDF works too), then open it in Mantel. It reads the file on your iPhone, finds what repeats, and forgets the file.</p></details>
-      <details><summary>Which iPhones does it work on?</summary><p>iPhones running iOS 18 or later. The optional Apple Intelligence extras need an iPhone 15 Pro or newer; everything else works without them.</p></details>
-      <details><summary>Can my spouse use it?</summary><p>Yes. Premium includes Family Sharing, so one purchase unlocks Premium on up to five family members' iPhones. Each phone keeps its own records; share the Emergency Binder or a backup file to pass information along.</p></details>
-      <details><summary>Is this financial, legal or insurance advice?</summary><p>No. Mantel organizes what you enter and reminds you about it. For advice, talk to a licensed professional.</p></details>
-    </section>
+  <section class="final night" id="get" aria-labelledby="get-title">
+    <div class="wrap">
+      <svg class="house" viewBox="0 0 88 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M39.82 3.42 A6.60 6.60 0 0 1 48.18 3.42 L85.58 34.02 A6.60 6.60 0 0 1 88.00 39.13 L88.00 92.62 A5.28 5.28 0 0 1 81.02 97.62 L45.06 85.36 A3.30 3.30 0 0 0 42.94 85.36 L6.98 97.62 A5.28 5.28 0 0 1 0.00 92.62 L0.00 39.13 A6.60 6.60 0 0 1 2.42 34.02 Z M37.84 45.00 L50.16 45.00 A5.72 5.72 0 0 1 55.88 50.72 L55.88 63.04 A5.72 5.72 0 0 1 50.16 68.76 L37.84 68.76 A5.72 5.72 0 0 1 32.12 63.04 L32.12 50.72 A5.72 5.72 0 0 1 37.84 45.00 Z"/><rect class="lamp" x="35.64" y="48.52" width="16.72" height="16.72" rx="3.52"/></svg>
+      <h2 id="get-title">Leave the light on.</h2>
+      <p class="lede">Homesake for iPhone is free to download. It's coming to the App Store soon.</p>
+      <div class="actions">
+        <span class="pill lamp" id="store-button" data-store>Coming soon to the App Store</span>
+        <a class="pill ghost" href="support.html">Questions? Read the help</a>
+      </div>
+      <div class="qr"><img src="assets/img/qr-get.svg" width="92" height="92" alt="QR code that opens homesake.app/get"><p>On a computer? Scan this with your iPhone's camera to get Homesake there.</p></div>
+    </div>
+  </section>
+</main>
 
-    <footer class="site">
-      <span>© 2026 Christopher Gates</span>
-      <span><a href="privacy.html">Privacy policy</a> · <a href="support.html">Support</a> · <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Terms of use</a></span>
-    </footer>
+<footer class="foot">
+  <div class="wrap">
+    <span class="made">Homesake is made by Christopher Gates in Georgia.</span>
+    <a href="privacy.html">Privacy policy</a>
+    <a href="support.html">Help</a>
+    <a href="mailto:support@homesake.app">support@homesake.app</a>
+    <span>© 2026</span>
   </div>
+</footer>
 </body>
 </html>
