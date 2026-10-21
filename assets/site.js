@@ -1,11 +1,12 @@
-// Homesake website: the live "Add anything" phone, the in-browser leak finder, the proof counters and the lamp.
+// Torvard website: the live assistant in the phone, the in-browser leak finder, the proof counters and the lamp.
 // Everything here runs in the visitor's browser. The page's security policy (connect-src 'none') means it
 // couldn't send what they type or open even if it tried.
 
 import {
-  parseCapture, readStatement, analyze, exampleStatementCSV, nextExpected, formatMoney, formatDate,
-  StatementError, STATEMENT_ERRORS, KIND_LABELS, CATEGORY_LABELS,
+  readStatement, analyze, exampleStatementCSV, nextExpected, formatMoney, formatDate,
+  StatementError, STATEMENT_ERRORS, CATEGORY_LABELS,
 } from './engine.js';
+import { Aide, exampleHousehold } from './aide.js';
 import { APP_STORE_URL } from './config.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -36,85 +37,131 @@ function icon(name) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The phone: type anything, see how Homesake files it
+// The phone: ask the Riveras' Torvard anything
 
-const KIND_ICONS = { bill: 'card', subscription: 'repeat', task: 'check', renewal: 'doc' };
+const ICONS = { check: 'check', card: 'card', repeat: 'repeat', doc: 'doc', cal: 'cal', hourglass: 'hourglass', home: 'home', phone: 'phone', lock: 'lock' };
 
-function dayLabel(date, { monthOnly = false, hasTime = false } = {}) {
-  if (monthOnly) return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const days = Math.round((new Date(date.getFullYear(), date.getMonth(), date.getDate()) - today) / 86400000);
-  let text;
-  if (days === 0) text = 'Today';
-  else if (days === 1) text = 'Tomorrow';
-  else if (days > 1 && days < 7) text = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
-  else text = formatDate(date, { year: date.getFullYear() !== now.getFullYear() });
-  if (hasTime) text += `, ${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(date)}`;
-  return text;
-}
+function setupAsk() {
+  const log = document.getElementById('ask-log');
+  const input = document.getElementById('ask-input');
+  const send = document.getElementById('ask-send');
+  const orbs = [document.getElementById('orb'), document.getElementById('orb-mini')].filter(Boolean);
+  const orb = { classList: { add: c => orbs.forEach(o => o.classList.add(c)), remove: c => orbs.forEach(o => o.classList.remove(c)) } };
+  const speakerButton = document.getElementById('ask-speaker');
+  if (!log || !input) return;
+  const aide = new Aide(exampleHousehold(new Date()), new Date());
+  let busy = false;
+  let userActed = false;
 
-function parsedRow(result) {
-  const meta = el('p', { class: 'meta' });
-  if (result.date) {
-    meta.append(el('span', {}, icon(result.isTrial ? 'hourglass' : 'cal'),
-      (result.isTrial ? 'Trial ends ' : '') + dayLabel(result.date, result)));
-  }
-  if (result.amount != null) meta.append(el('span', {}, icon('dollar'), formatMoney(result.amount)));
-  if (result.repeats) meta.append(el('span', {}, icon('repeat'), result.repeats.label));
-  if (result.kind === 'task' && result.area === 'home') meta.append(el('span', {}, icon('home'), 'Home'));
-  if (!meta.childNodes.length) meta.append(el('span', {}, 'No date yet. Homesake keeps it on your list.'));
-  return el('li', {},
-    el('p', { class: 'row1' },
-      el('span', { class: 'kind' }, icon(KIND_ICONS[result.kind] || 'check'), KIND_LABELS[result.kind] || 'Task'),
-      el('span', { class: 'name' }, result.title)),
-    meta);
-}
-
-function setupPhone() {
-  const input = document.getElementById('quick');
-  const list = document.getElementById('parsed');
-  const willAdd = document.getElementById('will-add');
-  const addCount = document.getElementById('add-count');
-  if (!input || !list) return;
-
-  let timer = null;
-  const fit = () => {
-    input.style.height = 'auto';
-    input.style.height = `${Math.max(112, input.scrollHeight + 2)}px`;
+  // Read aloud with the voices built into this device only, so the words never go to a speech server.
+  const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
+  const localVoice = () => {
+    const voices = synth ? synth.getVoices().filter(v => v.localService && /^en(-|_|$)/i.test(v.lang)) : [];
+    return voices.find(v => /samantha|ava|allison|karen|daniel/i.test(v.name)) || voices[0] || null;
   };
-  const render = () => {
-    fit();
-    const lines = input.value.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 8);
-    const results = lines.map(line => parseCapture(line));
-    list.replaceChildren(...results.map(parsedRow));
-    if (!results.length) {
-      willAdd.textContent = 'Type a bill, a date, a chore, anything';
-      addCount.textContent = 'Add';
-    } else {
-      willAdd.textContent = results.length === 1 ? 'Homesake will add' : `Homesake will add ${results.length} things`;
-      addCount.textContent = results.length === 1 ? 'Add' : `Add ${results.length}`;
+  let speakOn = false;
+  if (!synth) speakerButton.hidden = true;
+  speakerButton.addEventListener('click', () => {
+    speakOn = !speakOn;
+    speakerButton.setAttribute('aria-pressed', String(speakOn));
+    if (!speakOn) synth?.cancel();
+  });
+  const speak = text => {
+    if (!speakOn || !synth) return;
+    const voice = localVoice();
+    if (!voice) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = voice;
+    u.rate = 1.03;
+    u.onstart = () => orb.classList.add('speaking');
+    u.onend = u.onerror = () => orb.classList.remove('speaking');
+    synth.speak(u);
+  };
+
+  const scrollDown = () => { log.scrollTop = log.scrollHeight; };
+
+  const render = (answerBox, answer) => {
+    answerBox.replaceChildren(el('p', {}, answer.text));
+    if (answer.items?.length) {
+      answerBox.append(el('ul', {}, answer.items.slice(0, 6).map(item =>
+        el('li', {}, el('span', { class: 'ico' }, icon(ICONS[item.icon] || 'check')), el('div', {}, el('b', {}, item.title), el('span', {}, item.detail))))));
+    }
+    if (answer.action) {
+      const button = el('button', { type: 'button' }, answer.action);
+      const row = el('div', { class: 'act' }, button);
+      button.addEventListener('click', () => {
+        row.replaceWith(el('p', { class: 'done' }, `✓ ${answer.done}`));
+        speak(answer.done);
+        scrollDown();
+      });
+      answerBox.append(row);
+    }
+    if (answer.follow?.length) {
+      const row = el('div', { class: 'follow' }, answer.follow.map(f => {
+        const b = el('button', { type: 'button' }, f);
+        b.addEventListener('click', () => ask(f));
+        return b;
+      }));
+      answerBox.append(row);
     }
   };
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(render, 90);
+
+  const ask = (raw, { instant = false } = {}) => {
+    const q = String(raw || '').trim();
+    if (!q || busy) return;
+    busy = true;
+    input.value = '';
+    log.classList.add('talking');
+    const answerBox = el('div', { class: 'a' }, el('div', { class: 'thinking-dots', 'aria-label': 'Thinking' }, el('span'), el('span'), el('span')));
+    const turn = el('div', { class: 'turn' }, el('p', { class: 'q' }, q), answerBox);
+    log.append(turn);
+    scrollDown();
+    orb.classList.add('thinking');
+    const answer = aide.answer(q);
+    // A short beat so it reads as an answer, not a page flicker. The work itself takes about a millisecond.
+    setTimeout(() => {
+      orb.classList.remove('thinking');
+      render(answerBox, answer);
+      // Show the question and the start of the answer, even when the answer is long.
+      log.scrollTop = Math.max(0, turn.offsetTop - log.offsetTop - 8);
+      speak(answer.text);
+      busy = false;
+    }, instant || reducedMotion ? 0 : 420);
+  };
+
+  send.addEventListener('click', () => { userActed = true; ask(input.value); });
+  input.addEventListener('focus', () => { userActed = true; });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); ask(input.value); }
   });
-  render();
 
   const device = document.querySelector('.hero-device');
   document.getElementById('examples')?.addEventListener('click', event => {
     const chip = event.target.closest('.chip');
     if (!chip) return;
-    const line = chip.textContent.trim();
-    const current = input.value.replace(/\s+$/, '');
-    input.value = current ? `${current}\n${line}` : line;
-    render();
+    userActed = true;
+    ask(chip.textContent);
     const rect = device.getBoundingClientRect();
     if (rect.top < 0 || rect.bottom > window.innerHeight) {
       device.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
     }
   });
+
+  // The one moment on load: the phone asks for its own brief, as if someone just said "Brief me."
+  if (reducedMotion) {
+    ask('Brief me', { instant: true });
+  } else {
+    const words = 'Brief me';
+    let i = 0;
+    setTimeout(function type() {
+      if (userActed) return;
+      i += 1;
+      input.value = words.slice(0, i);
+      if (i < words.length) setTimeout(type, 70);
+      else setTimeout(() => { if (!userActed) ask(words); }, 260);
+    }, 900);
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -315,10 +362,10 @@ function setupStoreLinks() {
     button.replaceWith(link);
   }
   const lede = document.querySelector('#get .lede');
-  if (lede) lede.textContent = 'Homesake for iPhone is free to download. Premium is optional.';
+  if (lede) lede.textContent = 'Torvard for iPhone is free to download. Premium is optional.';
 }
 
-setupPhone();
+setupAsk();
 setupLeakFinder();
 setupProof();
 setupLamp();

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
-<title>Homesake: your household, kept private</title>
-<meta name="description" content="Homesake keeps your household's bills, documents, upkeep, home history and family records on your iPhone. No account, no servers. Try the money-leak finder right on this page.">
+<title>Torvard: ask your life anything</title>
+<meta name="description" content="Torvard is a private personal assistant for your bills, papers, home and family. Ask it anything, tell it what to remember, and it warns you first. It all stays on your iPhone. Try it on this page.">
 <meta name="theme-color" content="#f4f4f8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b12" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -14,10 +14,10 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="assets/site.css">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Homesake">
-<meta property="og:title" content="Homesake: your household, kept private">
-<meta property="og:description" content="Bills, documents, upkeep and family records on your iPhone. No account, no servers.">
-<meta property="og:image" content="https://homesake.app/assets/img/og.png">
+<meta property="og:site_name" content="Torvard">
+<meta property="og:title" content="Torvard: ask your life anything">
+<meta property="og:description" content="A private assistant for your bills, papers, home and family, on your iPhone. No account, no servers.">
+<meta property="og:image" content="https://torvard.app/assets/img/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <script type="module" src="assets/site.js"></script>
 </head>
@@ -25,7 +25,7 @@
 <a class="skip" href="#main">Skip to content</a>
 
 <svg width="0" height="0" class="visually-hidden" aria-hidden="true">
-  <symbol id="mark" viewBox="0 0 88 100"><path fill="currentColor" fill-rule="evenodd" d="M39.82 3.42 A6.60 6.60 0 0 1 48.18 3.42 L85.58 34.02 A6.60 6.60 0 0 1 88.00 39.13 L88.00 92.62 A5.28 5.28 0 0 1 81.02 97.62 L45.06 85.36 A3.30 3.30 0 0 0 42.94 85.36 L6.98 97.62 A5.28 5.28 0 0 1 0.00 92.62 L0.00 39.13 A6.60 6.60 0 0 1 2.42 34.02 Z M37.84 45.00 L50.16 45.00 A5.72 5.72 0 0 1 55.88 50.72 L55.88 63.04 A5.72 5.72 0 0 1 50.16 68.76 L37.84 68.76 A5.72 5.72 0 0 1 32.12 63.04 L32.12 50.72 A5.72 5.72 0 0 1 37.84 45.00 Z"/><rect x="35.64" y="48.52" width="16.72" height="16.72" rx="3.52" fill="#FFC15C"/></symbol>
+  <symbol id="mark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42.5" fill="none" stroke="currentColor" stroke-width="15"/><circle cx="50" cy="50" r="18" fill="#FFC15C"/></symbol>
   <symbol id="i-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h3"/></g></symbol>
   <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5a7.5 7.5 0 0 1 13.2-4.9L19.5 9M19.5 4.5V9H15M20 12.5a7.5 7.5 0 0 1-13.2 4.9L4.5 15M4.5 19.5V15H9"/></g></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.4l2.7 2.7L16.2 9.6"/></g></symbol>
@@ -41,12 +41,16 @@
   <symbol id="i-sparkle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></g></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></g></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></g></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></g></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></g></symbol>
   <symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9 5-9 5-9-5zM3 13l9 5 9-5"/></g></symbol>
 </svg>
 
 <header class="top">
-  <a class="brand" href="./" aria-label="Homesake, home page"><svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>Homesake</a>
+  <a class="brand" href="./" aria-label="Torvard, home page"><svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>Torvard</a>
   <nav aria-label="On this page">
+    <a href="#try">Try it</a>
     <a href="#leaks">Leak finder</a>
     <a href="#private">Privacy</a>
     <a href="#pricing">Pricing</a>
@@ -58,40 +62,49 @@
 <main id="main">
 
   <!-- Morning -->
-  <section class="hero" aria-labelledby="hero-title">
+  <section class="hero" id="try" aria-labelledby="hero-title">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <h1 id="hero-title">Your household, kept.</h1>
-        <p class="lede">Bills, papers, upkeep and the people you love, in one private app on your iPhone. No account and no servers, and it gets more useful every year you keep it.</p>
+        <h1 id="hero-title">Ask your life anything.</h1>
+        <p class="lede">Torvard is a personal assistant for your bills, papers, home and family. Ask when the passport expires, what you spend on streaming or who the plumber is. Tell it what to remember. It answers in a blink, warns you before things come due, and keeps all of it on your iPhone.</p>
         <div class="hero-actions">
-          <a class="pill" href="#get" data-get>Get Homesake</a>
+          <a class="pill" href="#get" data-get>Get Torvard</a>
           <span class="note">Free for iPhone. Premium is optional.</span>
         </div>
         <div class="try-block">
-          <p class="try-hint">The phone works. Type into it, or tap an example:</p>
+          <p class="try-hint">This is the Riveras' Torvard, and it works. Ask it something:</p>
           <div class="examples" id="examples">
-            <button class="chip" type="button">Passport expires March 2029</button>
-            <button class="chip" type="button">Car insurance $164 every month on the 3rd</button>
-            <button class="chip" type="button">Mom's birthday June 3</button>
-            <button class="chip" type="button">Spotify $11.99 monthly</button>
+            <button class="chip" type="button">When does my passport expire?</button>
+            <button class="chip" type="button">How much do I spend on streaming?</button>
+            <button class="chip" type="button">Who's my plumber?</button>
+            <button class="chip" type="button">When did I last change the HVAC filter?</button>
+            <button class="chip" type="button">Remind me to call the dentist tomorrow at 10am</button>
+            <button class="chip" type="button">What color is the kitchen?</button>
           </div>
-          <p class="proof"><span class="pulse" aria-hidden="true"></span><span><strong id="proof-line">Nothing you type here leaves this page.</strong> It's read by code running in your browser. <a href="#how">How we know</a></span></p>
+          <p class="proof"><span class="pulse" aria-hidden="true"></span><span><strong id="proof-line">Nothing you type here leaves this page.</strong> The answers are worked out by code running in your browser. <a href="#how">How we know</a></span></p>
         </div>
       </div>
 
       <div class="hero-device">
         <div class="device">
-          <div class="device-screen">
+          <div class="device-screen ask-screen">
             <div class="device-island" aria-hidden="true"></div>
             <div class="statusbar" aria-hidden="true"><span>9:41</span><span class="icons"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="battery"></span></span></div>
-            <div class="sheet">
-              <div class="sheet-bar" aria-hidden="true"><span class="cancel">Cancel</span><span class="title">Add anything</span><span class="add" id="add-count">Add 3</span></div>
-              <label class="visually-hidden" for="quick">Type things to add, one per line</label>
-              <textarea id="quick" rows="4" spellcheck="false" autocomplete="off">Water bill $64 on the 15th every month
-Netflix trial ends Friday $15.49
-Change HVAC filter every 3 months</textarea>
-              <p class="will-add" id="will-add" aria-live="polite">Homesake will add 3 things</p>
-              <ol class="parsed" id="parsed"></ol>
+            <div class="ask-top">
+              <span class="ask-done" aria-hidden="true">Done</span>
+              <span class="ask-title"><span class="orb mini" id="orb-mini" aria-hidden="true"><i></i></span>Torvard</span>
+              <button class="ask-speaker" id="ask-speaker" type="button" aria-pressed="false" aria-label="Read answers aloud"><svg aria-hidden="true"><use href="#i-speaker"/></svg></button>
+            </div>
+            <div class="ask-log" id="ask-log" aria-live="polite">
+              <div class="ask-intro">
+                <div class="orb" id="orb" aria-hidden="true"><i></i></div>
+                <p class="ask-hello">What can I do for you?</p>
+              </div>
+            </div>
+            <div class="ask-bar">
+              <label class="visually-hidden" for="ask-input">Ask or tell Torvard</label>
+              <input id="ask-input" type="text" placeholder="Ask or tell Torvard…" autocomplete="off" enterkeyhint="send" spellcheck="false">
+              <button id="ask-send" type="button" aria-label="Ask"><svg aria-hidden="true"><use href="#i-send"/></svg></button>
             </div>
           </div>
         </div>
@@ -129,7 +142,7 @@ Change HVAC filter every 3 months</textarea>
         </div>
         <ul class="charges" id="charges"></ul>
         <div class="report-cta">
-          <a class="pill" href="#get" data-get>Watch them every month in Homesake</a>
+          <a class="pill" href="#get" data-get>Watch them every month in Torvard</a>
           <span class="muted small">The app reminds you before each renewal and free trial, and keeps what you save.</span>
         </div>
       </div>
@@ -146,18 +159,18 @@ Change HVAC filter every 3 months</textarea>
         <li class="moment">
           <div class="moment-copy">
             <time datetime="07:02">7:02 AM</time>
-            <h3>A brief before coffee.</h3>
-            <p>What's due, what renews, whose birthday it is, and the one thing you shouldn't forget, in a few sentences. Written on your iPhone, by your iPhone.</p>
+            <h3>A brief before coffee, read aloud.</h3>
+            <p>What's overdue, what's due today, the bills this week and the trial about to charge you, in a few sentences. Tap Listen, or just say "Hey Siri, Torvard brief me."</p>
           </div>
-          <div class="shot"><img src="assets/img/today.webp" width="640" height="1391" loading="lazy" alt="Homesake's Today screen with a short written brief about bills, a free trial and a warranty"></div>
+          <div class="shot"><img src="assets/img/today.webp" width="640" height="1390" loading="lazy" alt="Torvard's Today screen: a short brief about an overdue filter, a free trial and this week's bills, with a field to ask Torvard anything"></div>
         </li>
         <li class="moment">
           <div class="moment-copy">
             <time datetime="12:40">12:40 PM</time>
             <h3>Every card and document, found in a second.</h3>
-            <p>Licenses, passports, insurance cards and warranties, scanned once. Homesake reads the expiration dates and reminds you before they run out.</p>
+            <p>Licenses, passports, insurance cards and warranties, scanned once. Torvard reads the expiration dates and reminds you before they run out.</p>
           </div>
-          <div class="shot"><img src="assets/img/vault.webp" width="640" height="1391" loading="lazy" alt="The Vault screen listing a warranty, a driver's license and a passport with their expiration dates"></div>
+          <div class="shot"><img src="assets/img/vault.webp" width="640" height="1390" loading="lazy" alt="The Vault screen listing a warranty, a driver's license and a passport with their expiration dates"></div>
         </li>
         <li class="moment">
           <div class="moment-copy">
@@ -165,7 +178,7 @@ Change HVAC filter every 3 months</textarea>
             <h3>Money, without a bank login.</h3>
             <p>Bills, subscriptions and income on one screen: what's due this week and what you pay every month. Nobody gets the keys to your bank.</p>
           </div>
-          <div class="shot"><img src="assets/img/money.webp" width="640" height="1391" loading="lazy" alt="The Money screen showing monthly totals and the bills coming due"></div>
+          <div class="shot"><img src="assets/img/money.webp" width="640" height="1390" loading="lazy" alt="The Money screen showing monthly totals and the bills coming due"></div>
         </li>
         <li class="moment">
           <div class="moment-copy">
@@ -173,7 +186,7 @@ Change HVAC filter every 3 months</textarea>
             <h3>The house's whole story.</h3>
             <p>The new roof, the heat pump, the paint color in the kitchen, who did the work and what it cost. One tap turns it into a home report for a buyer or an insurer.</p>
           </div>
-          <div class="shot"><img src="assets/img/history.webp" width="640" height="1391" loading="lazy" alt="The Home history screen with projects by year and their costs"></div>
+          <div class="shot"><img src="assets/img/history.webp" width="640" height="1390" loading="lazy" alt="The Home history screen with projects by year and their costs"></div>
         </li>
       </ol>
     </div>
@@ -185,13 +198,13 @@ Change HVAC filter every 3 months</textarea>
       <div class="split">
         <div>
           <h2 id="private-title">Here's everything we know about you.</h2>
-          <div class="nothing" role="img" aria-label="An empty box"><div><strong>Nothing.</strong>Homesake has no servers, no accounts, no analytics and no ads. There's nowhere for your life to go.</div></div>
+          <div class="nothing" role="img" aria-label="An empty box"><div><strong>Nothing.</strong>Torvard has no servers, no accounts, no analytics and no ads. There's nowhere for your life to go.</div></div>
         </div>
         <ul class="facts">
           <li><span class="ico" aria-hidden="true"><svg><use href="#i-phone"/></svg></span><div><h3>It all lives on your iPhone.</h3><p>Encrypted by iOS and sealed whenever the phone is locked. Lock the app itself with Face ID if you like.</p></div></li>
           <li><span class="ico" aria-hidden="true"><svg><use href="#i-bank"/></svg></span><div><h3>No bank login, ever.</h3><p>The leak finder reads a statement file you choose, then forgets it. No middleman holds a key to your money.</p></div></li>
-          <li><span class="ico" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></span><div><h3>AI that stays home.</h3><p>On iPhone 15 Pro and newer, Apple Intelligence writes your brief on the phone. Your records never go to an AI company.</p></div></li>
-          <li><span class="ico" aria-hidden="true"><svg><use href="#i-eyeoff"/></svg></span><div><h3>Check it yourself.</h3><p>iPhone's App Privacy Report lists every server each app contacts. Homesake's list stays empty.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></span><div><h3>An assistant that stays home.</h3><p>Torvard works out its answers on your iPhone, on every iPhone. With Apple Intelligence it can do even more, still on the phone. Your records never go to an AI company.</p></div></li>
+          <li><span class="ico" aria-hidden="true"><svg><use href="#i-eyeoff"/></svg></span><div><h3>Check it yourself.</h3><p>iPhone's App Privacy Report lists every server each app contacts. Torvard's list stays empty.</p></div></li>
         </ul>
       </div>
 
@@ -219,7 +232,7 @@ Change HVAC filter every 3 months</textarea>
           <li><h3>An emergency binder.</h3><p>One password-locked PDF with everything your family would need if something happened to you.</p></li>
         </ul>
       </div>
-      <div class="shot"><img src="assets/img/year.webp" width="640" height="1391" loading="lazy" alt="The Year at Home screen: 25 things handled this year"></div>
+      <div class="shot"><img src="assets/img/year.webp" width="640" height="1390" loading="lazy" alt="The Year at Home screen: 25 things handled this year"></div>
     </div>
   </section>
 
@@ -233,7 +246,8 @@ Change HVAC filter every 3 months</textarea>
           <p class="price-note">Everything you need to run the house.</p>
           <ul>
             <li>Tasks, reminders and home upkeep</li>
-            <li>The morning brief and widgets</li>
+            <li>Ask Torvard anything, by voice or typing</li>
+            <li>The morning brief, read aloud, and widgets</li>
             <li>Bills, documents and policies to start</li>
             <li>Face ID lock, Siri, backups and exports</li>
           </ul>
@@ -259,24 +273,24 @@ Change HVAC filter every 3 months</textarea>
 
   <section class="final night" id="get" aria-labelledby="get-title">
     <div class="wrap">
-      <svg class="house" viewBox="0 0 88 100" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M39.82 3.42 A6.60 6.60 0 0 1 48.18 3.42 L85.58 34.02 A6.60 6.60 0 0 1 88.00 39.13 L88.00 92.62 A5.28 5.28 0 0 1 81.02 97.62 L45.06 85.36 A3.30 3.30 0 0 0 42.94 85.36 L6.98 97.62 A5.28 5.28 0 0 1 0.00 92.62 L0.00 39.13 A6.60 6.60 0 0 1 2.42 34.02 Z M37.84 45.00 L50.16 45.00 A5.72 5.72 0 0 1 55.88 50.72 L55.88 63.04 A5.72 5.72 0 0 1 50.16 68.76 L37.84 68.76 A5.72 5.72 0 0 1 32.12 63.04 L32.12 50.72 A5.72 5.72 0 0 1 37.84 45.00 Z"/><rect class="lamp" x="35.64" y="48.52" width="16.72" height="16.72" rx="3.52"/></svg>
-      <h2 id="get-title">Leave the light on.</h2>
-      <p class="lede">Homesake for iPhone is free to download. It's coming to the App Store soon.</p>
+      <svg class="house" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42.5" fill="none" stroke="currentColor" stroke-width="15"/><circle class="lamp" cx="50" cy="50" r="18"/></svg>
+      <h2 id="get-title">Say the word.</h2>
+      <p class="lede">Torvard for iPhone is free to download. It's coming to the App Store soon.</p>
       <div class="actions">
         <span class="pill lamp" id="store-button" data-store>Coming soon to the App Store</span>
         <a class="pill ghost" href="support.html">Questions? Read the help</a>
       </div>
-      <div class="qr"><img src="assets/img/qr-get.svg" width="92" height="92" alt="QR code that opens homesake.app/get"><p>On a computer? Scan this with your iPhone's camera to get Homesake there.</p></div>
+      <div class="qr"><img src="assets/img/qr-get.svg" width="92" height="92" alt="QR code that opens torvard.app/get"><p>On a computer? Scan this with your iPhone's camera to get Torvard there.</p></div>
     </div>
   </section>
 </main>
 
 <footer class="foot">
   <div class="wrap">
-    <span class="made">Homesake is made by Christopher Gates in Georgia.</span>
+    <span class="made">Torvard is made by Christopher Gates in Georgia.</span>
     <a href="privacy.html">Privacy policy</a>
     <a href="support.html">Help</a>
-    <a href="mailto:support@homesake.app">support@homesake.app</a>
+    <a href="mailto:support@torvard.app">support@torvard.app</a>
     <span>© 2026</span>
   </div>
 </footer>

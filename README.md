@@ -1,6 +1,6 @@
-# homesake.app
+# torvard.app
 
-The website for Homesake, the private household app for iPhone. Plain HTML, CSS and JavaScript, published by
+The website for Torvard, the private household app for iPhone. Plain HTML, CSS and JavaScript, published by
 GitHub Pages (see `.github/workflows/pages.yml`). Nothing on the site loads from other companies, and every page
 carries a security policy (`connect-src 'none'`) so it can't send anything a visitor types or opens.
 
