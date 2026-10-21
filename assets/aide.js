@@ -229,8 +229,14 @@ export class Aide {
       if ((over && withOverdue) || (!over && inWin(t.due))) items.push({ date: t.due, title: t.title, inline: low(t.title), over, detail: over ? `Overdue since ${dayInline(t.due, now)}` : `Due ${dayInline(t.due, now)}`, icon: 'check' });
     }
     for (const b of this.h.bills) {
+      const trialSameDay = b.trialEnds && inWin(b.trialEnds) && inWin(b.due) && daysBetween(startOfDay(b.trialEnds), startOfDay(b.due)) === 0;
+      if (trialSameDay) {
+        // One line for "the trial ends and the first charge lands", not two.
+        items.push({ date: b.due, title: `${b.name} trial ends`, inline: `the ${b.name} trial ending`, over: false, amount: b.amount, detail: `Then ${money(b.amount)}/mo · ${dayInline(b.due, now)}`, icon: 'hourglass' });
+        continue;
+      }
       if (inWin(b.due)) items.push({ date: b.due, title: b.name, inline: b.name, over: false, amount: b.amount, detail: `${money(b.amount)}${b.autopay ? ' · autopay' : ''} · ${dayInline(b.due, now)}`, icon: b.sub ? 'repeat' : 'card' });
-      if (b.trialEnds && inWin(b.trialEnds)) items.push({ date: b.trialEnds, title: `${b.name} trial ends`, inline: `the ${b.name} trial ending`, over: false, detail: `Then ${money(b.amount)}/mo`, icon: 'hourglass' });
+      if (b.trialEnds && inWin(b.trialEnds)) items.push({ date: b.trialEnds, title: `${b.name} trial ends`, inline: `the ${b.name} trial ending`, over: false, detail: `Then ${money(b.amount)}/mo · ${dayInline(b.trialEnds, now)}`, icon: 'hourglass' });
     }
     for (const doc of this.h.docs) {
       if (doc.expires && inWin(doc.expires)) {
@@ -261,7 +267,8 @@ export class Aide {
     const renewal = all.find(i => i.renewal !== undefined && !i.over);
     const h = now.getHours();
     const s = [h >= 4 && h < 12 ? 'Good morning, Alex.' : h >= 12 && h < 17 ? 'Good afternoon, Alex.' : 'Good evening, Alex.'];
-    if (over.length) s.push(`${count(over.length, 'thing')} overdue, starting with ${over[0].inline}.`);
+    if (over.length === 1) s.push(`One thing is overdue: ${over[0].inline}.`);
+    else if (over.length) s.push(`${count(over.length, 'thing')} overdue, starting with ${over[0].inline}.`);
     if (todays.length === 1) s.push(`Today: ${todays[0].inline}.`);
     else if (todays.length > 1) s.push(`${count(todays.length, 'thing')} today, starting with ${todays[0].inline}.`);
     if (trial) s.push(`Your ${trial.name} trial ends ${dayInline(trial.trialEnds, now)}, then it's ${money(trial.amount)}/mo.`);
@@ -549,7 +556,7 @@ export class Aide {
       if (!n) return 0;
       return n * 3 + (named ? (d.owner === named.id ? 3 : -2) : 0);
     })[0];
-    if (doc) return { text: doc.location ? `The ${low(doc.title)} original is in ${doc.location}.` : `${doc.title} is saved in Vault, but I don't know where the paper original is.`, items: [{ title: doc.title, detail: doc.location || 'Vault', icon: 'doc' }] };
+    if (doc) return { text: doc.location ? `The original ${low(doc.title)} is in ${doc.location}.` : `${doc.title} is saved in Vault, but I don't know where the paper original is.`, items: [{ title: doc.title, detail: doc.location || 'Vault', icon: 'doc' }] };
     return null;
   }
 

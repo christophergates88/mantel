@@ -6,12 +6,13 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <title>Cason: ask your life anything</title>
-<meta name="description" content="Meet Cason, a private personal assistant for your bills, papers, home and family. Ask it anything, tell it what to remember, and it warns you first. It all stays on your iPhone. Try it on this page.">
-<meta name="theme-color" content="#f4f4f8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0b12" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Cason is a private assistant for your bills, papers, home and family. It runs alongside your day, answers in a second and speaks up before things are due. It all stays on your iPhone. Try it on this page.">
+<meta name="theme-color" content="#f5f4fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0d1c" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-64.png" sizes="64x64" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/bricolage.woff" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="assets/site.css">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cason">
@@ -21,112 +22,185 @@
 <meta name="twitter:card" content="summary_large_image">
 <script type="module" src="assets/site.js"></script>
 </head>
-<body>
+<body class="home">
 <a class="skip" href="#main">Skip to content</a>
 
 <svg width="0" height="0" class="visually-hidden" aria-hidden="true">
-  <symbol id="mark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42.5" fill="none" stroke="currentColor" stroke-width="15"/><circle cx="50" cy="50" r="18" fill="#FFC15C"/></symbol>
+  <symbol id="mark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42.5" fill="none" stroke="currentColor" stroke-width="15"/><circle cx="50" cy="50" r="18" fill="#FFB547"/></symbol>
   <symbol id="i-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h3"/></g></symbol>
   <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5a7.5 7.5 0 0 1 13.2-4.9L19.5 9M19.5 4.5V9H15M20 12.5a7.5 7.5 0 0 1-13.2 4.9L4.5 15M4.5 19.5V15H9"/></g></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.4l2.7 2.7L16.2 9.6"/></g></symbol>
   <symbol id="i-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></g></symbol>
   <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g></symbol>
-  <symbol id="i-dollar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.6 9.3c-.5-1-1.5-1.6-2.7-1.6-1.5 0-2.6.8-2.6 2s1 1.7 2.7 2.1c1.8.4 2.8 1 2.8 2.3s-1.2 2.1-2.8 2.1c-1.3 0-2.4-.6-2.9-1.7M12 6v1.7M12 16.2V18"/></g></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6.5 8 6.5v9a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></g></symbol>
   <symbol id="i-hourglass" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10M7 21h10M8 3c0 4.5 8 5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5-8 9s8 4.5 8 9"/></g></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8.5L19 7.5V21H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></g></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></g></symbol>
-  <symbol id="i-eyeoff" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A9.7 9.7 0 0 1 12 5c5 0 8.8 4.4 9.8 7-.4 1-1.3 2.4-2.6 3.7M6.3 6.4C4.4 7.7 2.9 9.7 2.2 12c1 2.6 4.8 7 9.8 7 1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></g></symbol>
-  <symbol id="i-bank" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 4l9 5.5M5 10.5v7.5M9.7 10.5v7.5M14.3 10.5v7.5M19 10.5v7.5M3 20.5h18"/></g></symbol>
-  <symbol id="i-sparkle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></g></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></g></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></g></symbol>
   <symbol id="i-speaker" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></g></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></g></symbol>
-  <symbol id="i-chev" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></g></symbol>
   <symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9 5-9 5-9-5zM3 13l9 5 9-5"/></g></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></symbol>
 </svg>
 
 <header class="top">
   <a class="brand" href="./" aria-label="Cason, home page"><svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>Cason</a>
   <nav aria-label="On this page">
-    <a href="#try">Try it</a>
+    <a href="#day">How it works</a>
     <a href="#leaks">Leak finder</a>
     <a href="#private">Privacy</a>
     <a href="#pricing">Pricing</a>
-    <a href="support.html">Help</a>
   </nav>
-  <a class="pill" href="#get" data-get>Get the app</a>
+  <a class="pill small" href="#get" data-get>Get Cason</a>
 </header>
 
 <main id="main">
 
-  <!-- Morning -->
   <section class="hero" id="try" aria-labelledby="hero-title">
-    <div class="wrap hero-grid">
-      <div class="hero-copy">
-        <h1 id="hero-title">Ask your life anything.</h1>
-        <p class="lede">Meet Cason, your personal assistant for bills, papers, home and family. Cason keeps track of everything in the background and tells you what you need to know before it matters. Ask when the passport expires or who the plumber is, or tell Cason what to remember. It all stays on your iPhone.</p>
-        <div class="hero-actions">
-          <a class="pill" href="#get" data-get>Get Cason</a>
-          <span class="note">Free for iPhone. Premium is optional.</span>
+    <div class="hero-inner">
+      <h1 id="hero-title">Ask your life anything.</h1>
+      <p class="hero-lede">Cason is a private assistant for your bills, papers, home and family. It runs alongside your day, answers in a second, and speaks up before anything is due. All on your iPhone.</p>
+
+      <div class="console" id="console">
+        <form class="ask-bar" id="ask-form" autocomplete="off">
+          <span class="orb" id="orb" aria-hidden="true"><i></i></span>
+          <label class="visually-hidden" for="ask-input">Ask or tell Cason</label>
+          <input id="ask-input" type="text" placeholder="Ask or tell Cason…" enterkeyhint="send" spellcheck="false">
+          <button class="speaker" id="ask-speaker" type="button" aria-pressed="false" aria-label="Read answers aloud" title="Read answers aloud"><svg aria-hidden="true"><use href="#i-speaker"/></svg></button>
+          <button class="send" id="ask-send" type="submit" aria-label="Ask"><svg aria-hidden="true"><use href="#i-send"/></svg></button>
+        </form>
+
+        <div class="suggest" id="examples" aria-label="Things to ask">
+          <button type="button">Brief me</button>
+          <button type="button">What's due this week?</button>
+          <button type="button">When does my passport expire?</button>
+          <button type="button">How much do I pay for streaming?</button>
+          <button type="button">Who's our plumber?</button>
+          <button type="button">What color is the kitchen?</button>
+          <button type="button">Remind me to call the dentist tomorrow at 10am</button>
         </div>
-        <div class="try-block">
-          <p class="try-hint">This is the Riveras' Cason, and it works. Ask it something:</p>
-          <div class="examples" id="examples">
-            <button class="chip" type="button">When does my passport expire?</button>
-            <button class="chip" type="button">How much do I spend on streaming?</button>
-            <button class="chip" type="button">Who's my plumber?</button>
-            <button class="chip" type="button">When did I last change the HVAC filter?</button>
-            <button class="chip" type="button">Remind me to call the dentist tomorrow at 10am</button>
-            <button class="chip" type="button">What color is the kitchen?</button>
-          </div>
-          <p class="proof"><span class="pulse" aria-hidden="true"></span><span><strong id="proof-line">Nothing you type here leaves this page.</strong> The answers are worked out by code running in your browser. <a href="#how">How we know</a></span></p>
+
+        <div class="reply" id="reply" aria-live="polite">
+          <p class="reply-q" id="reply-q"></p>
+          <div class="reply-a" id="reply-a"></div>
         </div>
+
+        <p class="console-note"><span class="dot" aria-hidden="true"></span>This is Cason for the Riveras, a made-up family. It's the real assistant, running in your browser, and nothing you type leaves this page.</p>
       </div>
 
-      <div class="hero-device">
-        <div class="device">
-          <div class="device-screen ask-screen">
-            <div class="device-island" aria-hidden="true"></div>
-            <div class="statusbar" aria-hidden="true"><span>9:41</span><span class="icons"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="battery"></span></span></div>
-            <div class="ask-top">
-              <span class="ask-done" aria-hidden="true">Done</span>
-              <span class="ask-title"><span class="orb mini" id="orb-mini" aria-hidden="true"><i></i></span>Cason</span>
-              <button class="ask-speaker" id="ask-speaker" type="button" aria-pressed="false" aria-label="Read answers aloud"><svg aria-hidden="true"><use href="#i-speaker"/></svg></button>
-            </div>
-            <div class="ask-log" id="ask-log" aria-live="polite">
-              <div class="ask-intro">
-                <div class="orb" id="orb" aria-hidden="true"><i></i></div>
-                <p class="ask-hello">What can I do for you?</p>
-              </div>
-            </div>
-            <div class="ask-bar">
-              <label class="visually-hidden" for="ask-input">Ask or tell Cason</label>
-              <input id="ask-input" type="text" placeholder="Ask or tell Cason…" autocomplete="off" enterkeyhint="send" spellcheck="false">
-              <button id="ask-send" type="button" aria-label="Ask"><svg aria-hidden="true"><use href="#i-send"/></svg></button>
-            </div>
-          </div>
+      <div class="hero-cta">
+        <a class="pill" href="#get" data-get>Get Cason for iPhone</a>
+        <span class="note">Free to download. Premium is optional.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="band night alongside" id="day" aria-labelledby="day-title">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="day-title">It runs alongside your day.</h2>
+        <p class="lede">You live your Tuesday. Cason watches the rest: the dates, the bills, the renewals, the house. It speaks up only when something needs you, and answers the moment you ask.</p>
+      </div>
+
+      <div class="lanes" role="list" aria-label="A Tuesday with Cason">
+        <div class="lane-labels" aria-hidden="true"><span>You</span><span></span><span><svg class="brand-mark"><use href="#mark"/></svg>Cason</span></div>
+
+        <div class="beat" role="listitem">
+          <p class="you"></p>
+          <time>6:58 AM</time>
+          <div class="cason"><p>Good morning. The HVAC filter is two days overdue, and Peacock's free trial turns into $10.99 a month on Saturday.</p><span class="tag">The morning brief</span></div>
+        </div>
+        <div class="beat" role="listitem">
+          <p class="you">Coffee, lunches, out the door.</p>
+          <time>7:40 AM</time>
+          <div class="cason quiet"><p>Noted: Georgia Power, $142.18, comes out Friday on autopay. No need to bother you.</p><span class="tag">Watching quietly</span></div>
+        </div>
+        <div class="beat" role="listitem">
+          <p class="you">“Remind me to call the dentist tomorrow at 10.”</p>
+          <time>9:15 AM</time>
+          <div class="cason"><p>Added: call the dentist, tomorrow at 10:00 AM.</p><span class="tag">Told by voice</span></div>
+        </div>
+        <div class="beat" role="listitem">
+          <p class="you"></p>
+          <time>12:30 PM</time>
+          <div class="cason"><p>Jordan's driver's license expires in 19 days.</p><span class="tag">A renewal, caught early</span></div>
+        </div>
+        <div class="beat" role="listitem">
+          <p class="you">At the hardware store. “What color is the kitchen?”</p>
+          <time>3:10 PM</time>
+          <div class="cason"><p>Sherwin-Williams Agreeable Gray, SW 7029, eggshell. You painted it two years ago.</p><span class="tag">Remembered for you</span></div>
+        </div>
+        <div class="beat" role="listitem">
+          <p class="you"></p>
+          <time>5:20 PM</time>
+          <div class="cason"><p>Netflix went up from $15.49 to $17.99. That's $30 more a year, and you also pay for Hulu and Peacock.</p><span class="tag">A price increase, spotted</span></div>
+        </div>
+        <div class="beat" role="listitem">
+          <p class="you">Kids asleep. “What's tomorrow look like?”</p>
+          <time>9:30 PM</time>
+          <div class="cason"><p>Book Sam's 4-year checkup, and call the dentist at 10. That's it.</p><span class="tag">Tomorrow, ready</span></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Late morning -->
-  <section class="leaks" id="leaks" aria-labelledby="leaks-title">
+  <section class="band everything" id="everything" aria-labelledby="every-title">
+    <div class="wrap split">
+      <div class="head sticky">
+        <h2 id="every-title">Everything you'd otherwise keep in your head.</h2>
+        <p class="lede">Bills, papers, insurance, health, the house, the car, the people you call. Add it once, by typing, talking or scanning. Then just ask. Try any question here.</p>
+      </div>
+      <ul class="topics" id="topics">
+        <li class="topic">
+          <div class="topic-row"><h3>Money</h3><p>Bills, subscriptions, price increases and free trials, with no bank login.</p><button type="button" class="ask-chip">How much do I pay for streaming?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+        <li class="topic">
+          <div class="topic-row"><h3>Papers</h3><p>IDs, passports, wills and warranties, when they expire and where the originals are.</p><button type="button" class="ask-chip">Where is the will?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+        <li class="topic">
+          <div class="topic-row"><h3>Insurance</h3><p>Every policy, renewal date, agent and claims line, one question away.</p><button type="button" class="ask-chip">What's the claims number for the car insurance?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+        <li class="topic">
+          <div class="topic-row"><h3>Family</h3><p>Allergies, medicines, doctors, blood types and birthdays for everyone, pets included.</p><button type="button" class="ask-chip">Is Sam allergic to anything?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+        <li class="topic">
+          <div class="topic-row"><h3>Home</h3><p>Upkeep that repeats from when you actually did it, and the house's whole history.</p><button type="button" class="ask-chip">When did I last change the HVAC filter?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+        <li class="topic">
+          <div class="topic-row"><h3>Car</h3><p>Registration, insurance and oil changes for every vehicle.</p><button type="button" class="ask-chip">When is the oil change due?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+        <li class="topic">
+          <div class="topic-row"><h3>People</h3><p>The plumber, the pediatrician, the vet, with the note you'd forget.</p><button type="button" class="ask-chip">Who's our plumber?</button></div>
+          <div class="topic-answer" hidden></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band leaks" id="leaks" aria-labelledby="leaks-title">
     <div class="wrap">
-      <div class="section-head">
+      <div class="head">
         <h2 id="leaks-title">What are you still paying for?</h2>
-        <p class="lede">Open a bank or card statement and see every charge that repeats, the ones that went up, and the services you pay for twice. It works right here, and the file never leaves this tab.</p>
+        <p class="lede">Open a bank or card statement and Cason finds every charge that repeats, the ones that went up, and the services you pay for twice. Try it right here. The file never leaves this tab.</p>
       </div>
 
       <div class="scanner" id="scanner">
-        <div class="glyph" aria-hidden="true"><svg><use href="#i-file"/></svg></div>
-        <h3>Drop a statement here</h3>
-        <p class="muted small">A CSV or OFX file from your bank's or card's website, ideally two or three months of transactions.</p>
+        <svg class="glyph" aria-hidden="true"><use href="#i-file"/></svg>
+        <div>
+          <h3>Drop a statement here</h3>
+          <p>A CSV or OFX file from your bank's or card's website, ideally two or three months of it.</p>
+        </div>
         <div class="buttons">
-          <label class="pill file-label">Choose a file<input type="file" id="statement" accept=".csv,.ofx,.qfx,.tsv,.txt,text/csv"></label>
-          <button class="pill ghost" type="button" id="use-example">Use an example statement</button>
+          <button class="pill" type="button" id="use-example">Use an example statement</button>
+          <label class="pill ghost file-label">Choose a file<input type="file" id="statement" accept=".csv,.ofx,.qfx,.tsv,.txt,text/csv"></label>
         </div>
       </div>
       <p class="scan-error" id="scan-error" role="alert" hidden></p>
@@ -134,153 +208,122 @@
       <div class="report" id="report" hidden>
         <div class="report-top">
           <div class="total">
-            <p class="eyebrow" id="total-count"></p>
+            <p class="total-count" id="total-count"></p>
             <p class="big" id="total-month"></p>
-            <p id="total-detail"></p>
+            <p class="total-detail" id="total-detail"></p>
           </div>
           <div class="insights" id="insights"></div>
         </div>
         <ul class="charges" id="charges"></ul>
-        <div class="report-cta">
-          <a class="pill" href="#get" data-get>Watch them every month in Cason</a>
-          <span class="muted small">The app reminds you before each renewal and free trial, and keeps what you save.</span>
-        </div>
+        <p class="report-cta"><a class="pill" href="#get" data-get>Watch them every month in Cason</a><span>The app reminds you before each renewal and free trial.</span></p>
       </div>
     </div>
   </section>
 
-  <!-- Afternoon into evening -->
-  <section class="day" aria-labelledby="day-title">
+  <section class="band app" id="app" aria-labelledby="app-title">
     <div class="wrap">
-      <div class="section-head">
-        <h2 id="day-title">One app for the whole day of a household.</h2>
+      <div class="head">
+        <h2 id="app-title">One app for the whole household.</h2>
+        <p class="lede">Five tabs, no setup project. Start with the example household to look around, or add your own in a few minutes.</p>
       </div>
-      <ol class="moments">
-        <li class="moment">
-          <div class="moment-copy">
-            <time datetime="07:02">7:02 AM</time>
-            <h3>A brief before coffee, read aloud.</h3>
-            <p>What's overdue, what's due today, the bills this week and the trial about to charge you, in a few sentences. Tap Listen, or just say "Hey Siri, Cason brief me."</p>
-          </div>
-          <div class="shot"><img src="assets/img/today.webp" width="640" height="1390" loading="lazy" alt="Cason's Today screen: a short brief about an overdue filter, a free trial and this week's bills, with a field to ask Cason anything"></div>
-        </li>
-        <li class="moment">
-          <div class="moment-copy">
-            <time datetime="12:40">12:40 PM</time>
-            <h3>Every card and document, found in a second.</h3>
-            <p>Licenses, passports, insurance cards and warranties, scanned once. Cason reads the expiration dates and reminds you before they run out.</p>
-          </div>
-          <div class="shot"><img src="assets/img/vault.webp" width="640" height="1390" loading="lazy" alt="The Vault screen listing a warranty, a driver's license and a passport with their expiration dates"></div>
-        </li>
-        <li class="moment">
-          <div class="moment-copy">
-            <time datetime="18:15">6:15 PM</time>
-            <h3>Money, without a bank login.</h3>
-            <p>Bills, subscriptions and income on one screen: what's due this week and what you pay every month. Nobody gets the keys to your bank.</p>
-          </div>
-          <div class="shot"><img src="assets/img/money.webp" width="640" height="1390" loading="lazy" alt="The Money screen showing monthly totals and the bills coming due"></div>
-        </li>
-        <li class="moment">
-          <div class="moment-copy">
-            <time datetime="21:30">9:30 PM</time>
-            <h3>The house's whole story.</h3>
-            <p>The new roof, the heat pump, the paint color in the kitchen, who did the work and what it cost. One tap turns it into a home report for a buyer or an insurer.</p>
-          </div>
-          <div class="shot"><img src="assets/img/history.webp" width="640" height="1390" loading="lazy" alt="The Home history screen with projects by year and their costs"></div>
-        </li>
-      </ol>
+    </div>
+    <div class="screens" tabindex="0" aria-label="Screens from the Cason app">
+      <figure><img src="assets/img/app-ask.webp" width="600" height="1304" loading="lazy" alt="Ask Cason: a question about a passport answered with the date and where the original is kept"><figcaption><b>Ask</b> by typing or talking, and hear the answer.</figcaption></figure>
+      <figure><img src="assets/img/app-today.webp" width="600" height="1304" loading="lazy" alt="Today: a short brief about an overdue filter, a free trial and this week's bills"><figcaption><b>Today</b> opens with your brief, read aloud if you like.</figcaption></figure>
+      <figure><img src="assets/img/app-money.webp" width="600" height="1304" loading="lazy" alt="Money: monthly totals and the bills coming due"><figcaption><b>Money</b> shows every bill and subscription, without a bank login.</figcaption></figure>
+      <figure><img src="assets/img/app-vault.webp" width="600" height="1304" loading="lazy" alt="Vault: the emergency binder, IDs with expiration dates and insurance policies"><figcaption><b>Vault</b> keeps IDs, documents and policies, with reminders before they expire.</figcaption></figure>
+      <figure><img src="assets/img/app-home.webp" width="600" height="1304" loading="lazy" alt="Home: the house, its history and the upkeep schedule"><figcaption><b>Home</b> tracks upkeep and the house's whole history.</figcaption></figure>
     </div>
   </section>
 
-  <!-- Dusk -->
-  <section class="private night" id="private" aria-labelledby="private-title">
-    <div class="wrap">
-      <div class="split">
-        <div>
-          <h2 id="private-title">Here's everything we know about you.</h2>
-          <div class="nothing" role="img" aria-label="An empty box"><div><strong>Nothing.</strong>Cason has no servers, no accounts, no analytics and no ads. There's nowhere for your life to go.</div></div>
-        </div>
-        <ul class="facts">
-          <li><span class="ico" aria-hidden="true"><svg><use href="#i-phone"/></svg></span><div><h3>It all lives on your iPhone.</h3><p>Encrypted by iOS and sealed whenever the phone is locked. Lock the app itself with Face ID if you like.</p></div></li>
-          <li><span class="ico" aria-hidden="true"><svg><use href="#i-bank"/></svg></span><div><h3>No bank login, ever.</h3><p>The leak finder reads a statement file you choose, then forgets it. No middleman holds a key to your money.</p></div></li>
-          <li><span class="ico" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></span><div><h3>An assistant that stays home.</h3><p>Cason works out its answers on your iPhone, on every iPhone. With Apple Intelligence it can do even more, still on the phone. Your records never go to an AI company.</p></div></li>
-          <li><span class="ico" aria-hidden="true"><svg><use href="#i-eyeoff"/></svg></span><div><h3>Check it yourself.</h3><p>iPhone's App Privacy Report lists every server each app contacts. Cason's list stays empty.</p></div></li>
-        </ul>
-      </div>
-
-      <div class="how" id="how">
-        <h3>How this page proves it</h3>
-        <p>The demos above are plain code running in your browser. This page carries a security rule that forbids it from connecting anywhere, so your browser would block it even if it tried:</p>
-        <code>connect-src 'none'; form-action 'none'</code>
-        <div class="counters" aria-live="polite">
-          <span><b id="count-requests">0</b>requests sent by this page since you arrived</span>
-          <span><b id="count-blocked">0</b>blocked attempts</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Evening -->
-  <section class="keep night" aria-labelledby="keep-title">
-    <div class="wrap keep-grid">
+  <section class="band voice" id="voice" aria-labelledby="voice-title">
+    <div class="wrap voice-grid">
       <div>
-        <h2 id="keep-title">The longer you keep it, the more it's worth.</h2>
-        <ul class="keepsakes">
-          <li><h3>A home report for the day you sell.</h3><p>Every repair, upgrade, warranty and paint color, with who did the work, in one PDF for the buyer, the appraiser or your insurer.</p></li>
-          <li><h3>A health page for every person.</h3><p>Vaccines, medicines, allergies and doctors on one page for a new pediatrician, a school form or the babysitter.</p></li>
-          <li><h3>Your year at home.</h3><p>Each December: what you handled, what you fixed and what you stopped paying for. A small record of a big year.</p></li>
-          <li><h3>An emergency binder.</h3><p>One password-locked PDF with everything your family would need if something happened to you.</p></li>
-        </ul>
+        <h2 id="voice-title">Talk to it. It talks back.</h2>
+        <p class="lede">Cason works with Siri, so you can ask from the car, the kitchen or the couch. The answers are worked out on your iPhone and read in your iPhone's own voice.</p>
+        <button class="pill listen" type="button" id="listen"><svg aria-hidden="true"><use href="#i-play"/></svg><span>Hear the Riveras' brief</span></button>
+        <p class="listen-note" id="listen-note" hidden>Your browser doesn't have a built-in voice to read it with.</p>
       </div>
-      <div class="shot"><img src="assets/img/year.webp" width="640" height="1390" loading="lazy" alt="The Year at Home screen: 25 things handled this year"></div>
+      <ul class="phrases">
+        <li>“Hey Siri, Cason brief me.”</li>
+        <li>“Hey Siri, ask Cason.” <span>“When is the car registration due?”</span></li>
+        <li>“Hey Siri, talk to Cason.”</li>
+      </ul>
     </div>
   </section>
 
-  <!-- Night -->
-  <section class="pricing night" id="pricing" aria-labelledby="pricing-title">
+  <section class="band night private" id="private" aria-labelledby="private-title">
     <div class="wrap">
-      <h2 id="pricing-title">Free to start. Premium when you want it all.</h2>
+      <div class="head">
+        <h2 id="private-title">Cason knows your life. We don't.</h2>
+        <p class="lede">There's no Cason account, no server, no analytics and no ads. Your records live on your iPhone, encrypted by iOS, and never go to us or to an AI company.</p>
+      </div>
+      <div class="proof" id="how">
+        <div class="proof-numbers" aria-live="polite">
+          <p><b id="count-requests">0</b><span>things this page has sent anywhere since you arrived</span></p>
+          <p><b id="count-blocked">0</b><span>attempts your browser had to block</span></p>
+        </div>
+        <div class="proof-copy">
+          <h3>Check it yourself, on this page</h3>
+          <p>Everything you tried above ran in your browser. This page carries a security rule that forbids it from connecting anywhere, so your browser would stop it even if it tried:</p>
+          <code>connect-src 'none'; form-action 'none'</code>
+          <p>On your iPhone, the App Privacy Report lists every server each app contacts. Cason's list stays empty.</p>
+        </div>
+      </div>
+      <ul class="facts">
+        <li><svg aria-hidden="true"><use href="#i-phone"/></svg><h3>It lives on your iPhone.</h3><p>Sealed whenever the phone is locked, with an optional Face ID lock on the app itself.</p></li>
+        <li><svg aria-hidden="true"><use href="#i-card"/></svg><h3>No bank login, ever.</h3><p>The leak finder reads a statement file you choose, then forgets it.</p></li>
+        <li><svg aria-hidden="true"><use href="#i-lock"/></svg><h3>Backups you control.</h3><p>Password-locked backup files that only you can open.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band pricing" id="pricing" aria-labelledby="pricing-title">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="pricing-title">Free to start. Premium when you want it all.</h2>
+      </div>
       <div class="plans">
         <div class="plan">
           <h3>Free</h3>
-          <p class="price-note">Everything you need to run the house.</p>
+          <p class="plan-note">Everything you need day to day.</p>
           <ul>
-            <li>Tasks, reminders and home upkeep</li>
             <li>Ask Cason anything, by voice or typing</li>
             <li>The morning brief, read aloud, and widgets</li>
-            <li>Bills, documents and policies to start</li>
+            <li>Tasks, reminders and home upkeep</li>
+            <li>Up to 10 bills, 10 documents and 2 policies</li>
             <li>Face ID lock, Siri, backups and exports</li>
           </ul>
         </div>
         <div class="plan premium">
           <h3>Premium</h3>
-          <p class="price-note">For the whole household, with Family Sharing.</p>
+          <p class="plan-note">Everything, with no limits.</p>
           <ul>
             <li>The money-leak finder</li>
             <li>Emergency binder, home report and health summaries</li>
             <li>Smart Scan reads dates off IDs, cards and warranties</li>
-            <li>No limits, income and side gigs, Apple Intelligence extras</li>
+            <li>Income tracking and Apple Intelligence extras</li>
           </ul>
           <div class="prices">
-            <div class="price best"><b>$39.99</b><span>a year, after two free weeks</span></div>
-            <div class="price"><b>$5.99</b><span>a month</span></div>
-            <div class="price"><b>$99.99</b><span>once, for life</span></div>
+            <p class="best"><b>$39.99</b><span>a year, after two free weeks</span></p>
+            <p><b>$5.99</b><span>a month</span></p>
+            <p><b>$99.99</b><span>once, for life</span></p>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="final night" id="get" aria-labelledby="get-title">
+  <section class="band night final" id="get" aria-labelledby="get-title">
     <div class="wrap">
-      <svg class="house" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42.5" fill="none" stroke="currentColor" stroke-width="15"/><circle class="lamp" cx="50" cy="50" r="18"/></svg>
-      <h2 id="get-title">Say the word.</h2>
-      <p class="lede">Cason for iPhone is free to download. It's coming to the App Store soon.</p>
+      <svg class="final-mark" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42.5" fill="none" stroke="currentColor" stroke-width="15"/><circle class="core" cx="50" cy="50" r="18"/></svg>
+      <h2 id="get-title">Meet Cason.</h2>
+      <p class="lede" id="get-lede">Free for iPhone, coming to the App Store soon.</p>
       <div class="actions">
         <span class="pill lamp" id="store-button" data-store>Coming soon to the App Store</span>
         <a class="pill ghost" href="support.html">Questions? Read the help</a>
       </div>
-      <div class="qr"><img src="assets/img/qr-get.svg" width="92" height="92" alt="QR code that opens askcason.com/get"><p>On a computer? Scan this with your iPhone's camera to get Cason there.</p></div>
+      <div class="qr"><img src="assets/img/qr-get.svg" width="96" height="96" alt="QR code that opens askcason.com/get"><p>On a computer? Point your iPhone's camera here to get Cason on your phone.</p></div>
     </div>
   </section>
 </main>

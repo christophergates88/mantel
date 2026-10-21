@@ -1,4 +1,4 @@
-// Cason website: the live assistant in the phone, the in-browser leak finder, the proof counters and the lamp.
+// Cason website: the live assistant, ask-by-topic, the in-browser leak finder, the read-aloud brief and the proof.
 // Everything here runs in the visitor's browser. The page's security policy (connect-src 'none') means it
 // couldn't send what they type or open even if it tried.
 
@@ -36,75 +36,84 @@ function icon(name) {
   return svg;
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// The phone: ask the Riveras' Cason anything
+const now = new Date();
+const aide = new Aide(exampleHousehold(now), now);
+const ICONS = new Set(['check', 'card', 'repeat', 'doc', 'cal', 'hourglass', 'home', 'phone', 'lock']);
 
-const ICONS = { check: 'check', card: 'card', repeat: 'repeat', doc: 'doc', cal: 'cal', hourglass: 'hourglass', home: 'home', phone: 'phone', lock: 'lock' };
+// ---------------------------------------------------------------------------------------------------------------
+// Speaking, with the voices built into this device only, so the words never go to a speech server.
+
+const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
+function localVoice() {
+  const voices = synth ? synth.getVoices().filter(v => v.localService && /^en(-|_|$)/i.test(v.lang)) : [];
+  return voices.find(v => /samantha|ava|allison|karen|daniel|serena/i.test(v.name)) || voices[0] || null;
+}
+
+/** Say it, or return false when there's no on-device voice to say it with. */
+function say(text, { onStart, onEnd } = {}) {
+  const voice = localVoice();
+  if (!synth || !voice) return false;
+  synth.cancel();
+  // "Cason" is said KAY-sun; spelling it that way keeps browser voices from guessing "CAH-son".
+  const u = new SpeechSynthesisUtterance(String(text).replace(/\bCason\b/g, 'Kay-sun'));
+  u.voice = voice;
+  u.rate = 1.02;
+  u.onstart = () => onStart?.();
+  u.onend = u.onerror = () => onEnd?.();
+  synth.speak(u);
+  return true;
+}
+
+/** An answer, rendered: the sentence, the items, an action to confirm, and follow-up questions. */
+function renderAnswer(box, answer, { onFollow, onDone } = {}) {
+  box.replaceChildren(el('p', {}, answer.text));
+  if (answer.items?.length) {
+    box.append(el('ul', { class: 'items' }, answer.items.slice(0, 6).map(item =>
+      el('li', {},
+        el('span', { class: 'ico' }, icon(ICONS.has(item.icon) ? item.icon : 'check')),
+        el('span', {}, el('b', {}, item.title), el('span', { class: 'd' }, item.detail))))));
+  }
+  if (answer.action) {
+    const button = el('button', { class: 'pill small', type: 'button' }, answer.action);
+    const row = el('div', { class: 'act' }, button);
+    button.addEventListener('click', () => {
+      row.replaceWith(el('p', { class: 'done' }, `✓ ${answer.done}`));
+      onDone?.(answer.done);
+    });
+    box.append(row);
+  }
+  if (answer.follow?.length && onFollow) {
+    box.append(el('div', { class: 'follow' }, answer.follow.map(f => {
+      const b = el('button', { type: 'button' }, f);
+      b.addEventListener('click', () => onFollow(f));
+      return b;
+    })));
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The console: ask the Riveras' Cason anything
 
 function setupAsk() {
-  const log = document.getElementById('ask-log');
+  const form = document.getElementById('ask-form');
   const input = document.getElementById('ask-input');
-  const send = document.getElementById('ask-send');
-  const orbs = [document.getElementById('orb'), document.getElementById('orb-mini')].filter(Boolean);
-  const orb = { classList: { add: c => orbs.forEach(o => o.classList.add(c)), remove: c => orbs.forEach(o => o.classList.remove(c)) } };
-  const speakerButton = document.getElementById('ask-speaker');
-  if (!log || !input) return;
-  const aide = new Aide(exampleHousehold(new Date()), new Date());
+  const orb = document.getElementById('orb');
+  const qOut = document.getElementById('reply-q');
+  const aOut = document.getElementById('reply-a');
+  const speaker = document.getElementById('ask-speaker');
+  if (!form) return;
   let busy = false;
   let userActed = false;
-
-  // Read aloud with the voices built into this device only, so the words never go to a speech server.
-  const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
-  const localVoice = () => {
-    const voices = synth ? synth.getVoices().filter(v => v.localService && /^en(-|_|$)/i.test(v.lang)) : [];
-    return voices.find(v => /samantha|ava|allison|karen|daniel/i.test(v.name)) || voices[0] || null;
-  };
   let speakOn = false;
-  if (!synth) speakerButton.hidden = true;
-  speakerButton.addEventListener('click', () => {
+
+  if (!synth) speaker.hidden = true;
+  speaker.addEventListener('click', () => {
     speakOn = !speakOn;
-    speakerButton.setAttribute('aria-pressed', String(speakOn));
+    speaker.setAttribute('aria-pressed', String(speakOn));
     if (!speakOn) synth?.cancel();
   });
   const speak = text => {
-    if (!speakOn || !synth) return;
-    const voice = localVoice();
-    if (!voice) return;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.voice = voice;
-    u.rate = 1.03;
-    u.onstart = () => orb.classList.add('speaking');
-    u.onend = u.onerror = () => orb.classList.remove('speaking');
-    synth.speak(u);
-  };
-
-  const scrollDown = () => { log.scrollTop = log.scrollHeight; };
-
-  const render = (answerBox, answer) => {
-    answerBox.replaceChildren(el('p', {}, answer.text));
-    if (answer.items?.length) {
-      answerBox.append(el('ul', {}, answer.items.slice(0, 6).map(item =>
-        el('li', {}, el('span', { class: 'ico' }, icon(ICONS[item.icon] || 'check')), el('div', {}, el('b', {}, item.title), el('span', {}, item.detail))))));
-    }
-    if (answer.action) {
-      const button = el('button', { type: 'button' }, answer.action);
-      const row = el('div', { class: 'act' }, button);
-      button.addEventListener('click', () => {
-        row.replaceWith(el('p', { class: 'done' }, `✓ ${answer.done}`));
-        speak(answer.done);
-        scrollDown();
-      });
-      answerBox.append(row);
-    }
-    if (answer.follow?.length) {
-      const row = el('div', { class: 'follow' }, answer.follow.map(f => {
-        const b = el('button', { type: 'button' }, f);
-        b.addEventListener('click', () => ask(f));
-        return b;
-      }));
-      answerBox.append(row);
-    }
+    if (speakOn) say(text, { onStart: () => orb.classList.add('speaking'), onEnd: () => orb.classList.remove('speaking') });
   };
 
   const ask = (raw, { instant = false } = {}) => {
@@ -112,56 +121,106 @@ function setupAsk() {
     if (!q || busy) return;
     busy = true;
     input.value = '';
-    log.classList.add('talking');
-    const answerBox = el('div', { class: 'a' }, el('div', { class: 'thinking-dots', 'aria-label': 'Thinking' }, el('span'), el('span'), el('span')));
-    const turn = el('div', { class: 'turn' }, el('p', { class: 'q' }, q), answerBox);
-    log.append(turn);
-    scrollDown();
+    qOut.textContent = q;
+    aOut.classList.remove('fresh');
+    aOut.replaceChildren(el('div', { class: 'dots', role: 'status', 'aria-label': 'Thinking' }, el('span'), el('span'), el('span')));
     orb.classList.add('thinking');
     const answer = aide.answer(q);
-    // A short beat so it reads as an answer, not a page flicker. The work itself takes about a millisecond.
+    // A short beat so it reads as an answer, not a flicker. The work itself takes about a millisecond.
     setTimeout(() => {
       orb.classList.remove('thinking');
-      render(answerBox, answer);
-      // Show the question and the start of the answer, even when the answer is long.
-      log.scrollTop = Math.max(0, turn.offsetTop - log.offsetTop - 8);
+      renderAnswer(aOut, answer, { onFollow: f => { userActed = true; ask(f); }, onDone: speak });
+      void aOut.offsetWidth;
+      aOut.classList.add('fresh');
       speak(answer.text);
       busy = false;
-    }, instant || reducedMotion ? 0 : 420);
+    }, instant || reducedMotion ? 0 : 450);
   };
 
-  send.addEventListener('click', () => { userActed = true; ask(input.value); });
-  input.addEventListener('focus', () => { userActed = true; });
-  input.addEventListener('keydown', event => {
-    if (event.key === 'Enter') { event.preventDefault(); ask(input.value); }
-  });
-
-  const device = document.querySelector('.hero-device');
-  document.getElementById('examples')?.addEventListener('click', event => {
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
+  form.addEventListener('submit', event => {
+    event.preventDefault();
     userActed = true;
-    ask(chip.textContent);
-    const rect = device.getBoundingClientRect();
-    if (rect.top < 0 || rect.bottom > window.innerHeight) {
-      device.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
-    }
+    ask(input.value);
+  });
+  input.addEventListener('focus', () => { userActed = true; });
+
+  document.getElementById('examples')?.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    userActed = true;
+    ask(button.textContent);
   });
 
-  // The one moment on load: the phone asks for its own brief, as if someone just said "Brief me."
+  // The one moment on load: someone says "Brief me," and Cason answers.
   if (reducedMotion) {
     ask('Brief me', { instant: true });
-  } else {
-    const words = 'Brief me';
-    let i = 0;
-    setTimeout(function type() {
-      if (userActed) return;
-      i += 1;
-      input.value = words.slice(0, i);
-      if (i < words.length) setTimeout(type, 70);
-      else setTimeout(() => { if (!userActed) ask(words); }, 260);
-    }, 900);
+    return;
   }
+  const words = 'Brief me';
+  let i = 0;
+  setTimeout(function type() {
+    if (userActed) return;
+    i += 1;
+    input.value = words.slice(0, i);
+    if (i < words.length) setTimeout(type, 75);
+    else setTimeout(() => { if (!userActed) ask(words); }, 280);
+  }, 1000);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Ask by topic: each question answers right under its row
+
+function setupTopics() {
+  const list = document.getElementById('topics');
+  if (!list) return;
+  list.addEventListener('click', event => {
+    const button = event.target.closest('.ask-chip');
+    if (!button) return;
+    const box = button.closest('.topic').querySelector('.topic-answer');
+    if (!box.hidden && box.dataset.q === button.textContent) {
+      box.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    box.dataset.q = button.textContent;
+    renderAnswer(box, aide.answer(button.textContent));
+    box.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+  });
+  for (const button of list.querySelectorAll('.ask-chip')) button.setAttribute('aria-expanded', 'false');
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Hear the brief
+
+function setupListen() {
+  const button = document.getElementById('listen');
+  const note = document.getElementById('listen-note');
+  if (!button) return;
+  const label = button.querySelector('span');
+  const use = button.querySelector('use');
+  let playing = false;
+  const reset = () => {
+    playing = false;
+    label.textContent = "Hear the Riveras' brief";
+    use.setAttribute('href', '#i-play');
+  };
+  button.addEventListener('click', () => {
+    if (playing) {
+      synth?.cancel();
+      reset();
+      return;
+    }
+    const ok = say(aide.answer('Brief me').text, {
+      onStart: () => {
+        playing = true;
+        label.textContent = 'Stop';
+        use.setAttribute('href', '#i-stop');
+      },
+      onEnd: reset,
+    });
+    note.hidden = ok;
+  });
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -313,7 +372,7 @@ function setupProof() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Night: the lamp comes on when you reach the end
+// The core lights up when you reach the end
 
 function setupLamp() {
   const final = document.getElementById('get');
@@ -331,15 +390,14 @@ function setupLamp() {
   observer.observe(final);
 }
 
-// The header turns to night once the page passes dusk.
+// A hairline under the header once the page scrolls.
 function setupHeader() {
   const header = document.querySelector('.top');
-  const dusk = document.getElementById('private');
-  if (!header || !dusk) return;
+  if (!header) return;
   let queued = false;
   const update = () => {
     queued = false;
-    header.classList.toggle('dark', dusk.getBoundingClientRect().top <= header.offsetHeight);
+    header.classList.toggle('scrolled', window.scrollY > 8);
   };
   window.addEventListener('scroll', () => {
     if (!queued) {
@@ -357,15 +415,14 @@ function setupStoreLinks() {
   if (!APP_STORE_URL) return;
   for (const link of document.querySelectorAll('[data-get]')) link.href = APP_STORE_URL;
   const button = document.querySelector('[data-store]');
-  if (button) {
-    const link = el('a', { class: button.className, href: APP_STORE_URL }, 'Download on the App Store');
-    button.replaceWith(link);
-  }
-  const lede = document.querySelector('#get .lede');
-  if (lede) lede.textContent = 'Cason for iPhone is free to download. Premium is optional.';
+  if (button) button.replaceWith(el('a', { class: 'pill lamp', href: APP_STORE_URL }, 'Download on the App Store'));
+  const lede = document.getElementById('get-lede');
+  if (lede) lede.textContent = 'Free for iPhone. Premium is optional.';
 }
 
 setupAsk();
+setupTopics();
+setupListen();
 setupLeakFinder();
 setupProof();
 setupLamp();
