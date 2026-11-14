@@ -3,7 +3,7 @@
 The small private server behind the photo buttons in `/kitchen` (Simmer). It takes a photo of the fridge, pantry
 or a receipt, asks a vision model what food is in it, and sends back a list. Photos are not stored.
 
-It is not switched on until it is deployed to Cloudflare:
+It runs as the Worker `simmer-reader` (deployed by upload on 2026-11-14; redeploy the same way or connect the repo):
 
 1. In the Cloudflare dashboard: Workers & Pages, Create, Import a repository, pick `christophergates88/mantel`,
    and set the root directory to `kitchen-worker`. Deploy.
