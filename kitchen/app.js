@@ -1,7 +1,9 @@
 // Simmer: a slow cooker kitchen for one household. Kept on the phone, and shared between the family's phones.
-import { CATALOG, RECIPES, SECTIONS } from './data.js';
-import { READER_URL } from './config.js';
-import { dish, LOOKS } from './art.js';
+// The page's other files are loaded with the same version stamp as this one, so a phone never mixes old and new.
+const V = new URL(import.meta.url).search;
+const { CATALOG, RECIPES, SECTIONS } = await import('./data.js' + V);
+const { READER_URL } = await import('./config.js' + V);
+const { dish, LOOKS } = await import('./art.js' + V);
 
 const KEY = 'simmer.v2';
 const API = READER_URL.replace(/\/$/, '');

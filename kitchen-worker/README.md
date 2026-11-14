@@ -24,3 +24,8 @@ With the key set, receipt and pantry photos are read by Claude too.
 The Worker was created in the dashboard and is updated by uploading `src/index.js` with these bindings:
 `AI` (Workers AI), `SIMMER_KV` (KV namespace `simmer-kitchen`), and the plain-text vars in `wrangler.jsonc`.
 Upload with `keep_bindings: ["secret_text"]` so the secret is not removed.
+
+## Updating the app
+
+After changing anything in `/kitchen`, write a new value into `kitchen/version.txt` (for example `date +%s > kitchen/version.txt`).
+`boot.js` reads it and loads that version of every file, so phones get the update on the next open.
