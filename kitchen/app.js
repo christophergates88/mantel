@@ -13,7 +13,10 @@ const money = n => '$' + n.toFixed(2);
 const cat = id => { const c = CATALOG[id]; return { id, name: c[0], section: c[1], w: c[2], i: c[3], buy: c[4], staple: !!c[5] }; };
 const recipe = id => RECIPES.find(r => r.id === id);
 const dinners = () => RECIPES.filter(r => !r.kind && !r.idea);
-const pic = r => dish(r.id, r.name, r.look);
+// A dish shows the family's own photo when they have taken one, otherwise the drawing.
+const pic = r => state.photos?.[r.id] && API && !r.idea
+  ? `<img class="dish" src="${API}/photo/${state.house}/${r.id}?v=${state.photos[r.id]}" alt="Photo of ${esc(r.name)}" loading="lazy">`
+  : dish(r.id, r.name, r.look);
 const KID = 'Cason';
 const SPECIAL = { '@leftovers': 'Leftovers', '@out': 'Eating out' }; // nights with nothing to cook
 const soft = n => /^(Sunday|Greek|Tuscan|Italian|French|Thai|Mexican|Cuban|Korean)\b/.test(n) ? n : n.charAt(0).toLowerCase() + n.slice(1); // mid-sentence
@@ -37,7 +40,7 @@ function dinnerAt() {
 
 // ---------------------------------------------------------------- state
 
-const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'prices', 'dinner', 'cooking', 'mine', 'items', 'rot', 'rate', 'last', 'updatedAt'];
+const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'prices', 'dinner', 'cooking', 'mine', 'items', 'rot', 'rate', 'last', 'log', 'low', 'photos', 'brief', 'briefs', 'updatedAt'];
 function newCode() {
   const a = new Uint8Array(20); crypto.getRandomValues(a);
   return [...a].map(n => 'abcdefghjkmnpqrstuvwxyz23456789'[n % 31]).join('');
@@ -45,7 +48,7 @@ function newCode() {
 function fresh() {
   const have = {};
   for (const id in CATALOG) if (CATALOG[id][5]) have[id] = true; // the spice shelf starts stocked
-  return { have, extra: [], plan: {}, prep: [], stash: {}, mine: [], items: {}, rot: {}, rate: {}, last: null, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
+  return { have, extra: [], plan: {}, prep: [], stash: {}, mine: [], items: {}, rot: {}, rate: {}, last: null, log: [], low: {}, photos: {}, brief: '07:00', briefs: {}, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
 }
 function load() {
   try {
@@ -75,8 +78,9 @@ function hydrate() {
   for (const it of ideas) if (ok(it.recipe)) RECIPES.push({ ...it.recipe, idea: true });
 }
 function tidy() {
-  for (const k of ['plan', 'stash', 'items', 'rot', 'rate']) if (!state[k] || typeof state[k] !== 'object') state[k] = {};
+  for (const k of ['plan', 'stash', 'items', 'rot', 'rate', 'low', 'photos', 'briefs']) if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   if (!Array.isArray(state.mine)) state.mine = [];
+  if (!Array.isArray(state.log)) state.log = [];
   hydrate();
   const real = id => { const r = recipe(id); return r && !r.idea ? r : null; };
   for (const k of Object.keys(state.plan)) if (k < today() || !(SPECIAL[state.plan[k]] || (real(state.plan[k]) && !real(state.plan[k]).kind))) delete state.plan[k];
@@ -90,6 +94,7 @@ const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } c
 let pushTimer;
 function save() {
   state.updatedAt = Date.now();
+  state.briefs = briefs();
   keep();
   clearTimeout(pushTimer);
   pushTimer = setTimeout(push, 700);
@@ -155,9 +160,59 @@ function shopping() {
       need.set(iid, { id: iid, packs });
     }
   }
+  for (const id of Object.keys(state.low)) if (CATALOG[id] && !need.has(id)) need.set(id, { id, packs: 1 }); // staples marked as running low
   const items = [...need.values()].sort((a, b) => SECTIONS.indexOf(cat(a.id).section) - SECTIONS.indexOf(cat(b.id).section));
   const total = store => items.reduce((sum, it) => sum + price(it.id, store) * it.packs, 0);
   return { items, w: total('w'), i: total('i') };
+}
+
+// When each meal was last made.
+const lastMade = id => { for (let n = state.log.length - 1; n >= 0; n--) if (state.log[n].id === id) return state.log[n].day; return ''; };
+const daysSince = id => { const d = lastMade(id); return d ? Math.round((new Date(today()) - new Date(d)) / 864e5) : 999; };
+const madeText = id => { const d = lastMade(id); return d ? 'Made ' + new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
+
+// The morning message for each of the next seven days, kept with the kitchen so the server can send it.
+function briefs() {
+  const out = {};
+  for (const d of week()) {
+    const v = state.plan[d.key], r = recipe(v);
+    let t = '';
+    if (v === '@leftovers') t = 'Leftovers tonight. Nothing to cook.';
+    else if (v === '@out') t = 'Eating out tonight. Nothing to cook.';
+    else if (r) {
+      const [h, m] = (state.dinner || '17:30').split(':').map(Number);
+      const dinner = new Date(d.date); dinner.setHours(h, m, 0, 0);
+      const need = missing(r).length;
+      t = `${r.name} tonight. In the pot by ${clock(new Date(dinner - r.hours * 36e5))} to eat at ${clock(dinner)}.${need ? ` Still need ${need} ${need === 1 ? 'thing' : 'things'}.` : ''}`;
+    }
+    if ([0, 6].includes(d.date.getDay()) && state.prep.length) t += `${t ? ' ' : ''}Weekend prep: ${state.prep.map(id => recipe(id)?.name).filter(Boolean).join(', ')}.`;
+    if (t) out[d.key] = t;
+  }
+  return out;
+}
+
+// Fills the open nights: rotation first, nothing made in the last two weeks, long cooks on weekdays, leftovers after a big roast.
+function autoplan() {
+  const days = week();
+  const used = new Set(Object.values(state.plan));
+  const hoursLeft = (dinnerAt() - Date.now()) / 36e5;
+  let filled = 0;
+  for (const d of days) {
+    if (state.plan[d.key] || (d.i === 0 && cookingNow())) continue;
+    const weekday = d.date.getDay() >= 1 && d.date.getDay() <= 5;
+    let pool = dinners().filter(r => !used.has(r.id) && (d.i > 0 || r.hours <= hoursLeft + 0.25));
+    if (pool.some(r => daysSince(r.id) > 14)) pool = pool.filter(r => daysSince(r.id) > 14);
+    if (!pool.length) continue;
+    const score = r => [state.rot[r.id] ? 0 : 1, weekday && r.hours < 8 ? 1 : 0, missing(r).length, -(state.rate[r.id] || 0), -r.protein];
+    pool.sort((a, b) => { const x = score(a), y = score(b); for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] - y[n]; return 0; });
+    const r = pool[0];
+    state.plan[d.key] = r.id; used.add(r.id); filled++;
+    const next = days[d.i + 1];
+    if (r.serves >= 8 && next && !state.plan[next.key]) { state.plan[next.key] = '@leftovers'; filled++; }
+  }
+  if (!filled) return toast('Every night already has a plan');
+  save(); render();
+  toast(`Planned ${filled} ${filled === 1 ? 'night' : 'nights'}. Tap Change on any you want to swap.`);
 }
 
 // The best thing to cook tonight when nothing is planned: fewest things to buy, then done by dinner, then protein.
@@ -232,6 +287,7 @@ function homeView() {
           <span class="meal">${esc(p.name)}<small>${missing(p).length ? missing(p).length + ' to buy' : 'ready to cook'}</small></span></button>
           <button class="swap" data-pick="${d.key}" aria-label="Change dinner for ${dayName(d)}">Change</button></li>`
       : `<li><button class="day" data-pick="${d.key}"><span class="dn">${dayName(d)}</span><span class="thumb empty"></span><span class="meal none">Add a meal or leftovers</span></button></li>`; }).join('')}</ul>
+  ${week().some(d => !state.plan[d.key]) ? `<button class="btn line wide" data-autoplan>Plan the open nights for me</button>` : ''}
   ${shop.items.length ? `<button class="btn wide" data-tab="list">${shop.items.length} ${shop.items.length === 1 ? 'thing' : 'things'} to buy, about ${money(Math.min(shop.w, shop.i))}</button>` : ''}
 
   <h2 class="shelf">Weekend prep for ${KID}</h2>
@@ -254,7 +310,8 @@ function homeView() {
   <div class="foot">
     <button class="link" data-dinner>Dinner at ${clock(dinnerAt())}</button>
     <button class="link" data-share-app>Add another phone</button>
-  </div>`;
+  </div>
+  <div class="foot one"><button class="link" data-morning>Morning reminder${state.brief ? ' at ' + clock(new Date(`2000-01-01T${state.brief}:00`)) : ''}</button></div>`;
 }
 
 const FILTERS = [['all', 'All'], ['rotation', 'On rotation'], ['ranked', 'Ranked'], ['allday', 'All day, 8+ hrs'], ['ready', 'Have everything'], ['protein', 'Most protein'], ['few', 'Fewest things']];
@@ -262,7 +319,7 @@ const starText = n => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '';
 
 function recipeRow(r, attr, rank) {
   const m = missing(r).length;
-  const tags = [state.rot[r.id] ? 'On rotation' : '', starText(state.rate[r.id]), r.mine ? 'Yours' : ''].filter(Boolean);
+  const tags = [state.rot[r.id] ? 'On rotation' : '', starText(state.rate[r.id]), madeText(r.id), r.mine ? 'Yours' : ''].filter(Boolean);
   return `<li><button class="card" ${attr}>
     <span class="thumb">${pic(r)}</span>
     <span class="txt"><span class="name">${rank ? rank + '. ' : ''}${esc(r.name)}</span>
@@ -312,7 +369,10 @@ function kitchenView() {
   ${SECTIONS.map(sec => `
     <h2 class="shelf">${sec}</h2>
     <div class="pills">${Object.keys(CATALOG).filter(id => CATALOG[id][1] === sec).map(id =>
-      `<button class="pill" data-have="${id}" aria-pressed="${!!state.have[id]}">${esc(CATALOG[id][0])}</button>`).join('')}</div>`).join('')}
+      CATALOG[id][5]
+        ? `<button class="pill ${state.low[id] ? 'low' : ''}" data-staple="${id}" aria-pressed="${!!state.have[id]}">${esc(CATALOG[id][0])}${state.low[id] ? ', low' : ''}</button>`
+        : `<button class="pill" data-have="${id}" aria-pressed="${!!state.have[id]}">${esc(CATALOG[id][0])}</button>`).join('')}</div>
+    ${sec === 'Staples' ? '<p class="note">Tap a staple once more when it is running low and it goes on the shopping list.</p>' : ''}`).join('')}
   <h2 class="shelf">Other things on hand</h2>
   ${state.extra.length ? `<div class="pills">${state.extra.map((n, i) =>
       `<button class="pill" data-extra="${i}" aria-pressed="true" aria-label="Remove ${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
@@ -324,7 +384,7 @@ function kitchenView() {
 
 function listView() {
   const shop = shopping();
-  if (!Object.keys(state.plan).length && !state.prep.length) return `<p class="note">Plan a few dinners on the Tonight screen and what you need shows up here, priced for Walmart and Ingles.</p>`;
+  if (!Object.keys(state.plan).length && !state.prep.length && !Object.keys(state.low).length) return `<p class="note">Plan a few dinners on the Tonight screen and what you need shows up here, priced for Walmart and Ingles.</p>`;
   if (!shop.items.length) return `<p class="note">Nothing to buy. Everything for this week is in the kitchen.</p>`;
   const cheaper = shop.w <= shop.i ? 'Walmart' : 'Ingles';
   return `
@@ -409,7 +469,8 @@ function prepSheet(r) {
   openSheet(`${closer}
   <div class="art">${pic(r)}</div>
   <h2 id="sheetTitle">${esc(r.name)}</h2>
-  <p class="facts">${esc(r.method)}. Makes ${esc(r.makes)}.</p>
+  <p class="facts">${esc(r.method)}. Makes ${esc(r.makes)}.${madeText(r.id) ? ' ' + madeText(r.id) + '.' : ''}</p>
+  ${r.idea || !API ? '' : `<div class="shots"><button class="link" data-shot="${r.id}">${state.photos[r.id] ? 'Retake my photo' : 'Use my own photo'}</button>${state.photos[r.id] ? `<button class="link" data-unshot="${r.id}">Go back to the drawing</button>` : ''}</div>`}
   <p class="blurb">${esc(r.blurb)}</p>
   ${r.idea ? ideaActs(r) : `<div class="acts two">
     <button class="btn ${on ? 'line' : ''}" data-prep="${r.id}">${on ? 'Take off weekend prep' : 'Add to weekend prep'}</button>
@@ -428,7 +489,8 @@ function recipeSheet(id) {
   openSheet(`${closer}
   <div class="art">${pic(r)}</div>
   <h2 id="sheetTitle">${esc(r.name)}</h2>
-  <p class="facts">${r.hours} hours on low. Serves ${r.serves}. About ${r.protein} g protein a serving.</p>
+  <p class="facts">${r.hours} hours on low. Serves ${r.serves}. About ${r.protein} g protein a serving.${madeText(r.id) ? ' ' + madeText(r.id) + '.' : ''}</p>
+  ${r.idea || !API ? '' : `<div class="shots"><button class="link" data-shot="${r.id}">${state.photos[r.id] ? 'Retake my photo' : 'Use my own photo'}</button>${state.photos[r.id] ? `<button class="link" data-unshot="${r.id}">Go back to the drawing</button>` : ''}</div>`}
   <p class="blurb">${esc(r.blurb)}</p>
   ${r.idea ? ideaActs(r) : `${lovedRow(r)}
   <h3>Cook it on</h3>
@@ -552,6 +614,7 @@ function spin(key) {
   if (key === 'next') key = (days.find(d => !state.plan[d.key]) || days[0]).key;
   const planned = new Set(Object.values(state.plan));
   let pool = onRotation().filter(r => r.id !== state.plan[key]);
+  if (pool.some(r => daysSince(r.id) > 14)) pool = pool.filter(r => daysSince(r.id) > 14);
   if (pool.some(r => !planned.has(r.id))) pool = pool.filter(r => !planned.has(r.id));
   if (!pool.length) return toast('Nothing else is on rotation yet');
   const r = pool[Math.floor(Math.random() * pool.length)];
@@ -565,6 +628,72 @@ function spin(key) {
 // ---------------------------------------------------------------- photos
 
 let snapKind = 'pantry';
+let shotFor = ''; // the recipe a dish photo is being taken for
+
+async function saveShot(id, file) {
+  try {
+    const b64 = await shrink(file, 900);
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const res = await fetch(`${API}/photo/${state.house}/${id}`, { method: 'PUT', headers: { 'content-type': 'image/jpeg' }, body: bytes });
+    if (!res.ok) throw new Error();
+    state.photos[id] = Date.now();
+    save(); render();
+    if (!$('#sheet').hidden) recipeSheet(id);
+    toast('Your photo is on this recipe now');
+  } catch { toast('That photo could not be saved. Try again.'); }
+}
+
+// ---------------------------------------------------------------- morning reminder (a notification, sent by the server)
+
+const canPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const swUrl = () => `sw.js?api=${encodeURIComponent(API)}&house=${state.house}`;
+async function pushState() {
+  if (!canPush()) return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+async function morningSheet(note = '') {
+  const sub = await pushState().catch(() => null);
+  openSheet(`${closer}<h2 id="sheetTitle">Morning reminder</h2>
+    <p class="blurb">A notification each morning with what is for dinner and when the pot needs to go on. Nothing is sent on days with no plan.</p>
+    ${note ? `<p class="little">${esc(note)}</p>` : ''}
+    <label class="time">Send it at <input type="time" id="briefTime" value="${esc(state.brief || '07:00')}"></label>
+    ${!canPush() ? `<p class="little">This only works when Simmer is opened from its home screen icon (iPhone needs iOS 16.4 or newer). Add it to the home screen, open it from there, and come back to this screen.</p>`
+      : sub ? `<p class="little"><b>On for this phone.</b> Each phone turns it on for itself.</p>
+        <button class="btn wide" data-push-test>Send a test now</button><button class="btn line wide" data-push-off>Turn off on this phone</button>`
+      : `<button class="btn wide" data-push-on>Turn on for this phone</button>`}
+    <button class="btn line wide" data-set-brief>Save the time</button>`);
+}
+async function pushOn() {
+  try {
+    if (await Notification.requestPermission() !== 'granted') return morningSheet('Notifications are blocked for Simmer. Allow them in the phone\'s Settings, then try again.');
+    const reg = await navigator.serviceWorker.register(swUrl());
+    await navigator.serviceWorker.ready;
+    const { key } = await (await fetch(API + '/push/key')).json();
+    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
+    const res = await fetch(`${API}/push/sub/${state.house}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || '');
+    save();
+    morningSheet('Turned on. Send a test to see it arrive.');
+  } catch (e) { morningSheet(e.message || 'It could not be turned on. Try again.'); }
+}
+async function pushOff() {
+  try {
+    const sub = await pushState();
+    if (sub) {
+      await fetch(`${API}/push/unsub/${state.house}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+      await sub.unsubscribe();
+    }
+  } catch { /* already off */ }
+  morningSheet('Turned off on this phone.');
+}
+async function pushTest() {
+  save();
+  const res = await fetch(`${API}/push/test/${state.house}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(r => r.json()).catch(() => ({}));
+  const ok = (res.sent || []).some(c => c >= 200 && c < 300);
+  morningSheet(ok ? 'Test sent. It should arrive within a few seconds.' : (res.error || 'The test could not be sent. Turn it off and on again, then retry.'));
+}
 
 function shrink(file, max = 1400) {
   return new Promise((resolve, reject) => {
@@ -729,6 +858,7 @@ document.addEventListener('click', e => {
   if (d.clear) {
     document.querySelectorAll('[data-used]:checked').forEach(box => { delete state.have[box.dataset.used]; });
     state.last = { id: d.clear, day: today() };
+    state.log = [...state.log, { id: d.clear, day: today() }].slice(-300);
     state.cooking = null; delete state.plan[today()];
     save(); closeSheet(); render(); return;
   }
@@ -747,8 +877,32 @@ document.addEventListener('click', e => {
     return render();
   }
   if (d.extra) { state.extra.splice(+d.extra, 1); save(); return render(); }
-  if (d.bought) { state.have[d.bought] = true; save(); render(); return toast(`${CATALOG[d.bought][0]} is in the kitchen`); }
+  if (d.bought) { state.have[d.bought] = true; delete state.low[d.bought]; save(); render(); return toast(`${CATALOG[d.bought][0]} is in the kitchen`); }
+  if (d.staple) {
+    const id = d.staple;
+    if (state.low[id]) { delete state.low[id]; delete state.have[id]; }      // low -> out
+    else if (state.have[id]) state.low[id] = true;                            // have -> running low
+    else state.have[id] = true;                                               // out -> have
+    save(); return render();
+  }
+  if ('autoplan' in d) return autoplan();
+  if (d.shot) { shotFor = d.shot; $('#photo').removeAttribute('multiple'); $('#photo').value = ''; $('#photo').click(); return; }
+  if (d.unshot) {
+    delete state.photos[d.unshot]; save();
+    fetch(`${API}/photo/${state.house}/${d.unshot}`, { method: 'DELETE' }).catch(() => {});
+    recipeSheet(d.unshot); return render();
+  }
+  if ('morning' in d) return morningSheet();
+  if ('pushOn' in d) return pushOn();
+  if ('pushOff' in d) return pushOff();
+  if ('pushTest' in d) return pushTest();
+  if ('relink' in d) {
+    if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to cut off the old link'; return; }
+    state.house = newCode(); state.photos = {}; save(); closeSheet(); render();
+    return toast('New link made. Send it to the phones you want.');
+  }
   if (d.snap) {
+    shotFor = ''; $('#photo').setAttribute('multiple', '');
     snapKind = d.snap;
     if (!API) return openSheet(`${closer}<h2 id="sheetTitle">Photos are not switched on yet</h2><p class="blurb">Until then, tick things off by hand in Kitchen.</p>`);
     $('#photo').value = ''; $('#photo').click();
@@ -760,7 +914,10 @@ document.addEventListener('click', e => {
     return openSheet(`${closer}<h2 id="sheetTitle">Add another phone</h2>
       <p class="blurb">Send this link to the other phone and open it there. Both phones then show the same dinners, kitchen and shopping list.</p>
       <p class="blurb">Anyone with the link can see and change this kitchen, so only send it to family.</p>
-      <button class="btn wide" data-send-link>Send the link</button>`);
+      <button class="btn wide" data-send-link>Send the link</button>
+      <h3>Shared it with the wrong person?</h3>
+      <p class="blurb">Make a new link. The old one stops working for every other phone, so you will need to send the new one again. Your own dish photos are not carried over.</p>
+      <button class="link drop" data-relink>Make a new link</button>`);
   }
   if ('sendLink' in d) return send({ title: 'Simmer', url: `${location.origin}${location.pathname}#house=${state.house}` }, 'Link copied');
   if ('dinner' in d) {
@@ -769,6 +926,11 @@ document.addEventListener('click', e => {
       <label class="time">Dinner time <input type="time" id="dinnerTime" value="${esc(state.dinner)}"></label>
       <button class="btn wide" data-set-dinner>Save</button>`);
   }
+  if ('setBrief' in d) {
+    const v = $('#briefTime').value;
+    if (/^\d\d:\d\d$/.test(v)) { state.brief = v; save(); }
+    closeSheet(); render(); return toast('Reminder time saved');
+  }
   if ('setDinner' in d) {
     const v = $('#dinnerTime').value;
     if (/^\d\d:\d\d$/.test(v)) { state.dinner = v; save(); }
@@ -776,7 +938,11 @@ document.addEventListener('click', e => {
   }
 });
 
-$('#photo').addEventListener('change', e => { if (e.target.files.length) readPhotos(e.target.files); });
+$('#photo').addEventListener('change', e => {
+  if (!e.target.files.length) return;
+  if (shotFor) return saveShot(shotFor, e.target.files[0]);
+  readPhotos(e.target.files);
+});
 
 document.addEventListener('submit', e => {
   if (e.target.id !== 'addExtra') return;

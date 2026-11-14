@@ -223,3 +223,8 @@ main { max-width: 30rem; margin: 0 auto; padding: 1.25rem 1.25rem 0; outline: no
 .btn.ideas { margin: 1.25rem 0 0; }
 .link.drop { display: block; margin-top: 1.5rem; color: #8C3B2A; }
 .sheet h3 + .btn.wide { margin-top: 0; }
+img.dish { object-fit: cover; }
+.foot.one { margin-top: .25rem; }
+.pill.low[aria-pressed="true"] { background: var(--brass); color: var(--ink); }
+.shots { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-top: .5rem; }
+.sheet .btn.wide + .btn.wide { margin-top: .6rem; }

@@ -26,14 +26,64 @@ Reply with ONLY this JSON, no other words: {"store": "w" | "i" | null, "items": 
 
 let localCount = { day: '', n: 0 };
 
+// ---------------------------------------------------------------- morning notifications (Web Push, no message body)
+
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const pushHostOk = endpoint => {
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === 'https:' && /(^|\.)(push\.apple\.com|fcm\.googleapis\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/.test(u.hostname);
+  } catch { return false; }
+};
+// The Worker makes its own signing key the first time it is needed and keeps it in KV.
+async function vapid(env) {
+  const saved = JSON.parse((await env.SIMMER_KV.get('vapid')) || 'null');
+  if (saved) return saved;
+  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const made = { pub: b64u(await crypto.subtle.exportKey('raw', pair.publicKey)), jwk: await crypto.subtle.exportKey('jwk', pair.privateKey) };
+  await env.SIMMER_KV.put('vapid', JSON.stringify(made));
+  return made;
+}
+async function sendPush(env, endpoint) {
+  try {
+    const v = await vapid(env);
+    const enc = o => b64u(new TextEncoder().encode(JSON.stringify(o)));
+    const unsigned = `${enc({ typ: 'JWT', alg: 'ES256' })}.${enc({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://askcason.com/kitchen/' })}`;
+    const key = await crypto.subtle.importKey('jwk', v.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(unsigned));
+    const res = await fetch(endpoint, { method: 'POST', headers: { Authorization: `vapid t=${unsigned}.${b64u(sig)}, k=${v.pub}`, TTL: '7200', Urgency: 'normal' } });
+    return res.status;
+  } catch { return 0; }
+}
+// Every 15 minutes: send each household its morning notification once, at the time it chose (Eastern time).
+async function morning(env) {
+  if (!env.SIMMER_KV) return;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(p => [p.type, p.value]));
+  const day = `${parts.year}-${parts.month}-${parts.day}`, now = +parts.hour * 60 + +parts.minute;
+  for (const code of JSON.parse((await env.SIMMER_KV.get('pushidx')) || '[]')) {
+    const doc = JSON.parse((await env.SIMMER_KV.get(`house:${code}`)) || 'null');
+    if (!doc || !doc.briefs || !doc.briefs[day]) continue;
+    const [h, m] = String(doc.brief || '07:00').split(':').map(Number);
+    const at = h * 60 + m;
+    if (!(now >= at && now < at + 15)) continue;
+    if (await env.SIMMER_KV.get(`sent:${code}:${day}`)) continue;
+    await env.SIMMER_KV.put(`sent:${code}:${day}`, '1', { expirationTtl: 172800 });
+    const subs = JSON.parse((await env.SIMMER_KV.get(`push:${code}`)) || '[]');
+    const results = await Promise.all(subs.map(sub => sendPush(env, sub)));
+    const live = subs.filter((_, i) => results[i] !== 404 && results[i] !== 410);
+    if (live.length !== subs.length) await env.SIMMER_KV.put(`push:${code}`, JSON.stringify(live));
+  }
+}
+
 export default {
+  async scheduled(event, env, ctx) { ctx.waitUntil(morning(env)); },
   async fetch(request, env) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
     const cors = {
       'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || 'null',
-      'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'content-type',
       'Vary': 'Origin',
     };
@@ -67,6 +117,49 @@ export default {
         return json({ ok: true });
       }
       return json({ error: 'not found' }, 404);
+    }
+
+    // A family's own photo of a dish: stored per household, shown on both phones.
+    const photo = url.pathname.match(/^\/photo\/([a-z0-9]{16,32})\/([a-z0-9_-]{1,80})$/);
+    if (photo && env.SIMMER_KV) {
+      const key = `photo:${photo[1]}:${photo[2]}`;
+      if (request.method === 'GET') {
+        const img = await env.SIMMER_KV.get(key, 'arrayBuffer');
+        if (!img) return new Response('not found', { status: 404 });
+        return new Response(img, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' } });
+      }
+      if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
+      if (request.method === 'DELETE') { await env.SIMMER_KV.delete(key); return json({ ok: true }); }
+      if (request.method === 'PUT') {
+        const body = await request.arrayBuffer();
+        const b = new Uint8Array(body);
+        if (b.length < 100 || b.length > 400000 || b[0] !== 0xff || b[1] !== 0xd8) return json({ error: 'That photo could not be saved.' }, 400);
+        await env.SIMMER_KV.put(key, body);
+        return json({ ok: true });
+      }
+    }
+
+    // Morning notifications.
+    const push = url.pathname.match(/^\/push\/(key|sub|unsub|test)(?:\/([a-z0-9]{16,32}))?$/);
+    if (push && env.SIMMER_KV) {
+      if (request.method === 'GET' && push[1] === 'key') return json({ key: (await vapid(env)).pub });
+      if (!allowed.includes(origin) || request.method !== 'POST' || !push[2]) return json({ error: 'not found' }, 404);
+      const code = push[2], key = `push:${code}`;
+      let subs = JSON.parse((await env.SIMMER_KV.get(key)) || '[]');
+      if (push[1] === 'test') {
+        if (!subs.length) return json({ error: 'No phone has notifications turned on yet.' }, 400);
+        return json({ sent: await Promise.all(subs.map(sub => sendPush(env, sub))) });
+      }
+      let body; try { body = await request.json(); } catch { return json({ error: 'bad request' }, 400); }
+      const endpoint = String(body.endpoint || body.subscription?.endpoint || '');
+      if (!pushHostOk(endpoint)) return json({ error: 'This phone\'s notification service is not supported.' }, 400);
+      subs = subs.filter(x => x !== endpoint);
+      if (push[1] === 'sub') subs = [...subs, endpoint].slice(-6);
+      await env.SIMMER_KV.put(key, JSON.stringify(subs));
+      const idx = new Set(JSON.parse((await env.SIMMER_KV.get('pushidx')) || '[]'));
+      if (subs.length) idx.add(code); else idx.delete(code);
+      await env.SIMMER_KV.put('pushidx', JSON.stringify([...idx].slice(-300)));
+      return json({ ok: true, phones: subs.length });
     }
 
     if (request.method === 'POST' && url.pathname === '/ideas') {

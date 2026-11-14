@@ -29,3 +29,8 @@ Upload with `keep_bindings: ["secret_text"]` so the secret is not removed.
 
 After changing anything in `/kitchen`, write a new value into `kitchen/version.txt` (for example `date +%s > kitchen/version.txt`).
 `boot.js` reads it and loads that version of every file, so phones get the update on the next open.
+
+## Morning reminder and dish photos
+
+- `GET /push/key`, `POST /push/sub|unsub|test/<code>`: Web Push with no message body. The Worker makes and keeps its own signing key in KV (`vapid`). A cron trigger (`*/15 * * * *`) runs `morning()`, which nudges each household once a day at its chosen Eastern time; the phone's `sw.js` then reads that day's line from the shared kitchen document.
+- `GET|PUT|DELETE /photo/<code>/<recipe id>`: the family's own JPEG for a dish, kept in KV.
