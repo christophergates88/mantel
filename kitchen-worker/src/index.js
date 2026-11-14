@@ -158,6 +158,36 @@ async function ask(env, prompt, images = [], maxTokens = 3000) {
   return typeof text === 'string' ? text : JSON.stringify(text);
 }
 
+// Text-only writing on Workers AI: try the strongest hosted model first, then fall back.
+const TEXT_MODELS = ['@cf/openai/gpt-oss-120b', '@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/mistralai/mistral-small-3.1-24b-instruct'];
+function textOf(out) {
+  if (!out) return '';
+  if (typeof out === 'string') return out;
+  if (typeof out.output_text === 'string') return out.output_text;
+  if (Array.isArray(out.output)) {
+    const t = out.output.flatMap(o => Array.isArray(o.content) ? o.content : []).map(c => c.text || '').join('');
+    if (t) return t;
+  }
+  const r = out.response ?? out.choices?.[0]?.message?.content ?? '';
+  return typeof r === 'string' ? r : JSON.stringify(r);
+}
+async function write(env, prompt, maxTokens) {
+  if (env.ANTHROPIC_API_KEY) return { text: await ask(env, prompt, [], maxTokens), model: 'claude' };
+  if (!env.AI) throw new Error('no model configured');
+  let last;
+  for (const model of (env.CF_TEXT_MODEL ? [env.CF_TEXT_MODEL] : TEXT_MODELS)) {
+    try {
+      const input = model.includes('gpt-oss')
+        ? { input: prompt, max_output_tokens: maxTokens + 2500, reasoning: { effort: 'low' } }
+        : { messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens };
+      const text = textOf(await env.AI.run(model, input));
+      if (text && text.includes('{')) return { text, model };
+      last = new Error(`${model} returned nothing`);
+    } catch (e) { last = e; }
+  }
+  throw last || new Error('no model answered');
+}
+
 // ---------------------------------------------------------------- new recipe ideas
 
 const SECTIONS = ['Meat', 'Produce', 'Cans and jars', 'Dairy and frozen', 'Grains'];
@@ -169,7 +199,9 @@ const RULES = `House rules, all of them required:
 - Low prep: 10 minutes of hands-on work at most. No browning or pre-cooking, except ground meat may be browned for 5 minutes.
 - Few ingredients: 4 to 8 in total, counting spices. Ordinary things an American supermarket (Walmart) sells. Prefer what the family already has.
 - A 17-month-old eats this too: mild, no whole nuts, no honey, nothing hard or round that is a choking risk, easy on the salt.
-- Plain American home cooking. Short, plain names (no brand names, no "healthy" or "easy" in the name).`;
+- Plain American home cooking that tastes good: season it properly (garlic, herbs, citrus, spices). Short, plain names in sentence case (no brand names, no "healthy" or "easy" in the name).
+- The three recipes must differ from each other in their main ingredient, and none may be a variation of a recipe the family already has.
+- Use an id from the ingredient list whenever the food matches, even loosely (frozen green beans = greenBeans). Only invent a new ingredient when nothing on the list fits.`;
 
 function ideaPrompt(kind, catalog, have, avoid, loved, looks) {
   const dinner = kind === 'dinner';
@@ -177,8 +209,10 @@ function ideaPrompt(kind, catalog, have, avoid, loved, looks) {
 
 ${RULES}
 ${dinner
-  ? `- Slow cooker on LOW, 5 to 9 hours. At least 28 grams of protein a serving. Thick, never soupy or watery. Food-safe: meat goes in thawed, canned beans only (never dry kidney beans), dairy and spinach are stirred in at the end.`
-  : `- Made in one batch on the weekend in the oven, on the stovetop, in the slow cooker or with no cooking, then kept in the fridge or freezer for the week. Soft enough for a toddler. Eggs and meat fully cooked.`}
+  ? `- Slow cooker on LOW, 5 to 9 hours. At least 28 grams of protein a serving. Thick, never soupy or watery.
+- Food-safe and sensible: whole cuts of meat go in raw and thawed; ground meat is browned in a pan first; canned beans only (never dry kidney beans); dairy and spinach are stirred in at the end; NEVER cook rice or pasta in the pot, list it as an ingredient with the amount "to serve".`
+  : `- Made in one batch on the weekend in the oven, on the stovetop, in the slow cooker or with no cooking, then kept in the fridge or freezer for the week. Soft enough for a toddler.
+- Food-safe and sensible: eggs fully cooked. Meat is rare in these; if used it must be ground turkey mixed and shaped into meatballs or patties and baked at 400°F until 165°F inside. Never raw diced chicken in a batter, muffin or bite. Pancakes are cooked on the stovetop, muffins and bars in the oven. Give the oven temperature and time in "method".`}
 
 Ingredients the app already knows (id = name). Use these ids whenever the food matches:
 ${catalog.map(c => `${c.id} = ${c.name}`).join('\n')}
@@ -193,6 +227,9 @@ Reply with ONLY this JSON, no other words:
 {"recipes":[{"name":"","blurb":"one or two short sentences on why it is good",${dinner ? '"hours":6,"serves":6,"protein":30' : '"method":"Oven, 350°F, 20 minutes","makes":"12 muffins","keeps":"Fridge 4 days. Freezer 2 months."'},"ings":[{"id":"catalog id or null","name":"plain ingredient name","amount":"how much goes in, e.g. 2 lb or 1 can, drained","packs":1,"section":"Meat | Produce | Cans and jars | Dairy and frozen | Grains","buy":"the package you buy, e.g. 15 oz can","walmart":1.25,"ingles":1.59}],"steps":["2 to 4 short steps with temperatures and times"],"little":"one sentence on how to serve it to the toddler","look":""}]}
 "walmart" and "ingles" are typical US dollar prices for that package (Ingles runs a little higher). "packs" is how many packages the recipe needs.`;
 }
+
+const PROPER = /^(sunday|greek|tuscan|italian|french|thai|mexican|cuban|korean|cajun|swedish|spanish|moroccan|hawaiian|dijon)$/i;
+const sentenceCase = name => name.split(' ').map((w, i) => PROPER.test(w) ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()).join(' ');
 
 async function ideas(request, env, json) {
   let body;
@@ -216,7 +253,9 @@ async function ideas(request, env, json) {
   }
 
   let text;
-  try { text = await ask(env, ideaPrompt(kind, catalog, have, names(body.avoid), names(body.loved).slice(0, 12), looks), [], 3500); }
+  let model = '';
+  const avoid = names(body.avoid);
+  try { ({ text, model } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 3500)); }
   catch (e) { return json({ error: 'The recipe writer is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502); }
   const parsed = extractJSON(text);
   if (!parsed || !Array.isArray(parsed.recipes)) return json({ error: 'The ideas came back garbled. Try again.' }, 502);
@@ -224,7 +263,9 @@ async function ideas(request, env, json) {
   const sweet = /\b(sugar|honey|maple|agave|syrup|molasses|ketchup|barbecue|bbq|teriyaki)\b/i;
   const lookIds = new Set(looks.map(l => l.id));
   const recipes = [];
-  for (const r of parsed.recipes.slice(0, 3)) {
+  const taken = new Set(avoid.map(n => n.toLowerCase()));
+  for (const r of parsed.recipes.slice(0, 4)) {
+    if (recipes.length === 3) break;
     const ings = (Array.isArray(r.ings) ? r.ings : []).slice(0, 10).map(g => {
       const id = known.has(g.id) ? g.id : null;
       const walmart = Math.round(num(g.walmart, 0.25, 40, 2.5) * 100) / 100;
@@ -235,8 +276,10 @@ async function ideas(request, env, json) {
       };
     }).filter(g => g.name);
     const steps = (Array.isArray(r.steps) ? r.steps : []).slice(0, 5).map(t => str(t, 240)).filter(Boolean);
-    const name = str(r.name, 60);
+    const name = sentenceCase(str(r.name, 60));
     if (!name || ings.length < 2 || steps.length < 2) continue;
+    if (taken.has(name.toLowerCase())) continue; // they already have it
+    taken.add(name.toLowerCase());
     if (ings.some(g => !g.id && sweet.test(g.name)) || sweet.test(name)) continue; // breaks the no-sugar rule
     const base = { name, blurb: str(r.blurb, 200), ings, steps, little: str(r.little, 200) || 'Cut small and let it cool.', look: lookIds.has(r.look) ? r.look : looks[0].id };
     recipes.push(kind === 'dinner'
@@ -244,7 +287,7 @@ async function ideas(request, env, json) {
       : { ...base, method: str(r.method, 60) || 'Oven', makes: str(r.makes, 40) || 'one batch', keeps: str(r.keeps, 120) || 'Fridge 3 days. Freezer 2 months.' });
   }
   if (!recipes.length) return json({ error: 'Nothing usable came back. Try again.' }, 502);
-  return json({ recipes });
+  return json({ recipes, model });
 }
 
 function extractJSON(text) {
