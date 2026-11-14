@@ -164,11 +164,14 @@ async function ask(env, prompt, images = [], maxTokens = 3000) {
 async function write(env, prompt, maxTokens) {
   if (!env.ANTHROPIC_API_KEY) throw new Error('no writer configured');
   const model = env.IDEAS_MODEL || env.MODEL || 'claude-haiku-5-5';
-  const res = await fetch(ANTHROPIC_URL, {
+  // Thinking is switched off so the whole allowance goes to the answer; if the service refuses that setting, ask again without it.
+  const call = extra => fetch(ANTHROPIC_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }], ...extra }),
   });
+  let res = await call({ thinking: { type: 'disabled' } });
+  if (res.status === 400) res = await call({});
   if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
   const data = await res.json();
   return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model, stop: data.stop_reason };
