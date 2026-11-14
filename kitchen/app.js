@@ -40,7 +40,7 @@ function dinnerAt() {
 
 // ---------------------------------------------------------------- state
 
-const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'prices', 'dinner', 'cooking', 'mine', 'items', 'rot', 'rate', 'last', 'log', 'low', 'photos', 'brief', 'briefs', 'updatedAt'];
+const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'prices', 'dinner', 'cooking', 'mine', 'items', 'rot', 'rate', 'last', 'log', 'low', 'photos', 'left', 'brief', 'briefs', 'updatedAt'];
 function newCode() {
   const a = new Uint8Array(20); crypto.getRandomValues(a);
   return [...a].map(n => 'abcdefghjkmnpqrstuvwxyz23456789'[n % 31]).join('');
@@ -48,7 +48,7 @@ function newCode() {
 function fresh() {
   const have = {};
   for (const id in CATALOG) if (CATALOG[id][5]) have[id] = true; // the spice shelf starts stocked
-  return { have, extra: [], plan: {}, prep: [], stash: {}, mine: [], items: {}, rot: {}, rate: {}, last: null, log: [], low: {}, photos: {}, brief: '07:00', briefs: {}, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
+  return { have, extra: [], plan: {}, prep: [], stash: {}, mine: [], items: {}, rot: {}, rate: {}, last: null, log: [], low: {}, left: {}, photos: {}, brief: '07:00', briefs: {}, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
 }
 function load() {
   try {
@@ -78,12 +78,13 @@ function hydrate() {
   for (const it of ideas) if (ok(it.recipe)) RECIPES.push({ ...it.recipe, idea: true });
 }
 function tidy() {
-  for (const k of ['plan', 'stash', 'items', 'rot', 'rate', 'low', 'photos', 'briefs']) if (!state[k] || typeof state[k] !== 'object') state[k] = {};
+  for (const k of ['plan', 'stash', 'items', 'rot', 'rate', 'low', 'photos', 'briefs', 'left']) if (!state[k] || typeof state[k] !== 'object') state[k] = {};
   if (!Array.isArray(state.mine)) state.mine = [];
   if (!Array.isArray(state.log)) state.log = [];
   hydrate();
   const real = id => { const r = recipe(id); return r && !r.idea ? r : null; };
   for (const k of Object.keys(state.plan)) if (k < today() || !(SPECIAL[state.plan[k]] || (real(state.plan[k]) && !real(state.plan[k]).kind))) delete state.plan[k];
+  for (const k of Object.keys(state.left)) if (state.plan[k] !== '@leftovers' || !real(state.left[k])) delete state.left[k];
   state.prep = (state.prep || []).filter(id => real(id)?.kind);
   for (const id of Object.keys(state.stash)) if (!real(id)) delete state.stash[id];
   if (state.cooking && !real(state.cooking.id)) state.cooking = null;
@@ -177,7 +178,7 @@ function briefs() {
   for (const d of week()) {
     const v = state.plan[d.key], r = recipe(v);
     let t = '';
-    if (v === '@leftovers') t = 'Leftovers tonight. Nothing to cook.';
+    if (v === '@leftovers') t = `Leftovers tonight${leftName(d.key) ? ' (' + soft(leftName(d.key)) + ')' : ''}. Nothing to cook.`;
     else if (v === '@out') t = 'Eating out tonight. Nothing to cook.';
     else if (r) {
       const [h, m] = (state.dinner || '17:30').split(':').map(Number);
@@ -208,7 +209,7 @@ function autoplan() {
     const r = pool[0];
     state.plan[d.key] = r.id; used.add(r.id); filled++;
     const next = days[d.i + 1];
-    if (r.serves >= 8 && next && !state.plan[next.key]) { state.plan[next.key] = '@leftovers'; filled++; }
+    if (r.serves >= 8 && next && !state.plan[next.key]) { state.plan[next.key] = '@leftovers'; state.left[next.key] = r.id; filled++; }
   }
   if (!filled) return toast('Every night already has a plan');
   save(); render();
@@ -232,13 +233,9 @@ function timing(r) {
 // ---------------------------------------------------------------- views
 
 const onRotation = () => dinners().filter(r => state.rot[r.id]);
-function leftoversFrom(i) {
-  const days = week();
-  for (let n = i - 1; n >= 0; n--) { const r = recipe(state.plan[days[n].key]); if (r) return r.name; }
-  const last = state.last && recipe(state.last.id);
-  return last && (new Date(today()) - new Date(state.last.day)) / 864e5 <= 3 ? last.name : '';
-}
-const specialNote = (v, i) => v === '@out' ? 'Nothing to cook' : (leftoversFrom(i) ? `From the ${soft(leftoversFrom(i))}` : 'Nothing to cook');
+// Leftovers only name a meal when someone has said which one they are from.
+const leftName = key => { const r = recipe(state.left[key]); return r ? r.name : ''; };
+const specialNote = (v, key) => v === '@out' ? 'Nothing to cook' : (leftName(key) ? `From the ${soft(leftName(key))}` : 'Tap to say what they are from');
 const BOX = `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" fill="#E9E1D2"/><path d="M11 21h26l-2.5 15a3 3 0 0 1-3 2.5h-15a3 3 0 0 1-3-2.5z" fill="#6E4A2E"/><rect x="9" y="15" width="30" height="6" rx="2" fill="#8A6140"/><rect x="20" y="11" width="8" height="4" rx="1.5" fill="#1E1B18"/></svg>`;
 
 function homeView() {
@@ -259,7 +256,7 @@ function homeView() {
       <div class="acts"><button class="btn brass" data-served="${r.id}">Dinner is served</button><button class="btn ghost" data-open="${r.id}">Recipe</button></div>`;
   } else if (special) {
     body = `<p class="kicker">Tonight</p><h2>${special}</h2>
-      <p class="when">${specialNote(tonight, 0)}. The pot gets the night off.</p>
+      <p class="when">${tonight === '@leftovers' && leftName(today()) ? `From the ${esc(soft(leftName(today())))}. ` : ''}The pot gets the night off.</p>
       <div class="acts"><button class="btn ghost" data-pick="${today()}">Change</button></div>`;
   } else if (planned) {
     body = `<p class="kicker">Tonight</p><h2>${esc(r.name)}</h2>
@@ -280,7 +277,7 @@ function homeView() {
   <ul class="days">${week().map(d => {
     const v = state.plan[d.key], p = recipe(v);
     if (SPECIAL[v]) return `<li><button class="day" data-pick="${d.key}" aria-label="${dayName(d)}: ${SPECIAL[v]}. Change it.">
-      <span class="dn">${dayName(d)}</span><span class="thumb">${BOX}</span><span class="meal">${SPECIAL[v]}<small>${esc(specialNote(v, d.i))}</small></span></button></li>`;
+      <span class="dn">${dayName(d)}</span><span class="thumb">${BOX}</span><span class="meal">${SPECIAL[v]}<small>${esc(specialNote(v, d.key))}</small></span></button></li>`;
     return p
       ? `<li class="dayrow"><button class="day" data-open="${p.id}" aria-label="${dayName(d)}: ${esc(p.name)}. Open the recipe.">
           <span class="dn">${dayName(d)}</span><span class="thumb">${pic(p)}</span>
@@ -518,6 +515,20 @@ function pickSheet(key) {
   <button class="btn wide spin" data-spin="${key}">Surprise me from the rotation</button>
   <ul class="cards tight">${rot.map(row).join('')}</ul>
   <h3>Everything else</h3>` : `<p class="blurb">Listed with what you can already make first.</p>`}
+  <ul class="cards tight">${rest.map(row).join('')}</ul>`);
+}
+
+// Choosing Leftovers asks which meal they are from, listing this week's dinners and the most recent ones first.
+function leftSheet(key) {
+  const d = week().find(x => x.key === key);
+  const recent = [...new Set([...week().filter(x => x.i < d.i).map(x => state.plan[x.key]), ...[...state.log].reverse().map(l => l.id)])]
+    .map(recipe).filter(r => r && !r.kind && !r.idea);
+  const rest = dinners().filter(r => !recent.includes(r)).sort((a, b) => a.name.localeCompare(b.name));
+  const row = r => recipeRow(r, `data-left="${key}" data-id="${r.id}" ${state.left[key] === r.id ? 'aria-current="true"' : ''}`);
+  openSheet(`${closer}
+  <h2 id="sheetTitle">Leftovers from what?</h2>
+  <button class="btn line wide" data-left="${key}" data-id="">Just leftovers, do not name a meal</button>
+  ${recent.length ? `<h3>This week and lately</h3><ul class="cards tight">${recent.map(row).join('')}</ul><h3>Everything else</h3>` : ''}
   <ul class="cards tight">${rest.map(row).join('')}</ul>`);
 }
 
@@ -847,10 +858,17 @@ document.addEventListener('click', e => {
     const was = state.plan[d.plan];
     if (!d.id || was === d.id) delete state.plan[d.plan]; else state.plan[d.plan] = d.id;
     if (d.plan === today() && state.cooking && state.cooking.id !== state.plan[d.plan]) state.cooking = null;
+    if (d.id === '@leftovers' && state.plan[d.plan] === '@leftovers') { save(); return leftSheet(d.plan); }
+    delete state.left[d.plan];
     save();
     if (b.classList.contains('chip')) { b.setAttribute('aria-pressed', state.plan[d.plan] === d.id); render(); return; }
     closeSheet(); render();
     return toast(state.plan[d.plan] ? `${SPECIAL[d.id] || recipe(d.id).name} is planned` : 'Night left open');
+  }
+  if (d.left) {
+    if (d.id) state.left[d.left] = d.id; else delete state.left[d.left];
+    save(); closeSheet(); render();
+    return toast(d.id ? `Leftovers from the ${soft(recipe(d.id).name)}` : 'Leftovers planned');
   }
   if (d.tonight) { state.plan[today()] = d.tonight; save(); render(); return toast('Planned for tonight'); }
   if (d.start) { state.plan[today()] = d.start; state.cooking = { id: d.start, start: Date.now() }; save(); render(); return toast('Timer started'); }
