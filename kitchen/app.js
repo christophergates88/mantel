@@ -794,4 +794,16 @@ setInterval(() => { if (tab === 'home' && $('#sheet').hidden && !document.hidden
 keep();
 render();
 pull();
-if (API) fetch(API + '/health').then(r => r.json()).then(j => { canWrite = j.writer === 'claude'; if (canWrite && tab === 'recipes' && $('#sheet').hidden) render(); }).catch(() => {});
+// Ask the server whether the recipe writer is on; remember the answer so a dropped connection does not hide the button.
+try { canWrite = localStorage.getItem('simmer.writer') === '1'; } catch { /* no storage */ }
+async function checkWriter(tries = 3) {
+  if (!API) return;
+  try {
+    const j = await (await fetch(API + '/health')).json();
+    const was = canWrite;
+    canWrite = j.writer === 'claude';
+    try { localStorage.setItem('simmer.writer', canWrite ? '1' : '0'); } catch { /* no storage */ }
+    if (canWrite !== was && tab === 'recipes' && $('#sheet').hidden) render();
+  } catch { if (tries > 1) setTimeout(() => checkWriter(tries - 1), 4000); }
+}
+checkWriter();
