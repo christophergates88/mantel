@@ -12,3 +12,15 @@ It runs as the Worker `simmer-reader` (deployed by upload on 2026-11-14; redeplo
    Cloudflare's own vision model, which needs no key.
 
 Limits: only the Simmer page can call it, and it stops at 40 reads a day (`MAX_READS_PER_DAY`).
+
+## New recipe ideas
+
+`POST /ideas` writes three new recipes to the house rules. It is off until the Worker has a secret named
+`ANTHROPIC_API_KEY`; the app hides its "Give me new ideas" button until `/health` reports `"writer": "claude"`.
+With the key set, receipt and pantry photos are read by Claude too.
+
+## Deploying
+
+The Worker was created in the dashboard and is updated by uploading `src/index.js` with these bindings:
+`AI` (Workers AI), `SIMMER_KV` (KV namespace `simmer-kitchen`), and the plain-text vars in `wrangler.jsonc`.
+Upload with `keep_bindings: ["secret_text"]` so the secret is not removed.

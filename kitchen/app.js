@@ -124,6 +124,7 @@ if (joined) history.replaceState(null, '', location.pathname);
 
 let tab = 'home';
 let filter = 'all';
+let canWrite = false; // the recipe writer is only offered once the server says it is switched on
 
 // ---------------------------------------------------------------- sums
 
@@ -276,7 +277,7 @@ const loved = (a, b) => (state.rot[b.id] ? 1 : 0) - (state.rot[a.id] ? 1 : 0) ||
 function recipesView() {
   const shelves = `<div class="seg" role="group" aria-label="Kind of recipe">${SHELVES.map(([id, label]) =>
     `<button data-shelf="${id}" aria-pressed="${shelfKind === id}">${label}</button>`).join('')}</div>`;
-  const more = `<button class="btn line wide ideas" data-ideas="${shelfKind}">Give me new ideas</button>`;
+  const more = canWrite ? `<button class="btn line wide ideas" data-ideas="${shelfKind}">Give me new ideas</button>` : '';
   if (shelfKind !== 'dinner') {
     const list = RECIPES.filter(r => r.kind === shelfKind && !r.idea).sort(loved);
     return `${shelves}
@@ -791,3 +792,4 @@ setInterval(() => { if (tab === 'home' && $('#sheet').hidden && !document.hidden
 keep();
 render();
 pull();
+if (API) fetch(API + '/health').then(r => r.json()).then(j => { canWrite = j.writer === 'claude'; if (canWrite && tab === 'recipes' && $('#sheet').hidden) render(); }).catch(() => {});

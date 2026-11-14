@@ -43,7 +43,7 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method === 'GET' && url.pathname === '/health') {
-      return json({ ok: true, reader: env.ANTHROPIC_API_KEY ? 'claude' : env.AI ? 'workers-ai' : 'none' });
+      return json({ ok: true, reader: env.ANTHROPIC_API_KEY ? 'claude' : env.AI ? 'workers-ai' : 'none', writer: env.ANTHROPIC_API_KEY ? 'claude' : 'none' });
     }
     // Shared kitchen: one small JSON document per household code, so two phones see the same plan and pantry.
     const house = url.pathname.match(/^\/house\/([a-z0-9]{16,32})$/);
@@ -71,6 +71,7 @@ export default {
 
     if (request.method === 'POST' && url.pathname === '/ideas') {
       if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
+      if (!env.ANTHROPIC_API_KEY) return json({ error: 'New ideas are not switched on yet.' }, 503);
       return ideas(request, env, json);
     }
 
@@ -158,34 +159,19 @@ async function ask(env, prompt, images = [], maxTokens = 3000) {
   return typeof text === 'string' ? text : JSON.stringify(text);
 }
 
-// Text-only writing on Workers AI: try the strongest hosted model first, then fall back.
-const TEXT_MODELS = ['@cf/openai/gpt-oss-120b', '@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/mistralai/mistral-small-3.1-24b-instruct'];
-function textOf(out) {
-  if (!out) return '';
-  if (typeof out === 'string') return out;
-  if (typeof out.output_text === 'string') return out.output_text;
-  if (Array.isArray(out.output)) {
-    const t = out.output.flatMap(o => Array.isArray(o.content) ? o.content : []).map(c => c.text || '').join('');
-    if (t) return t;
-  }
-  const r = out.response ?? out.choices?.[0]?.message?.content ?? '';
-  return typeof r === 'string' ? r : JSON.stringify(r);
-}
+// Recipe writing is only switched on with a Claude key. The free Workers AI models were tried on 2026-11-14 and wrote
+// recipes that were not good enough to cook from (wrong methods, and one unsafe way of cooking chicken for a toddler).
 async function write(env, prompt, maxTokens) {
-  if (env.ANTHROPIC_API_KEY) return { text: await ask(env, prompt, [], maxTokens), model: 'claude' };
-  if (!env.AI) throw new Error('no model configured');
-  let last;
-  for (const model of (env.CF_TEXT_MODEL ? [env.CF_TEXT_MODEL] : TEXT_MODELS)) {
-    try {
-      const input = model.includes('gpt-oss')
-        ? { input: prompt, max_output_tokens: maxTokens + 2500, reasoning: { effort: 'low' } }
-        : { messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens };
-      const text = textOf(await env.AI.run(model, input));
-      if (text && text.includes('{')) return { text, model };
-      last = new Error(`${model} returned nothing`);
-    } catch (e) { last = e; }
-  }
-  throw last || new Error('no model answered');
+  if (!env.ANTHROPIC_API_KEY) throw new Error('no writer configured');
+  const model = env.IDEAS_MODEL || env.MODEL || 'claude-haiku-5-5';
+  const res = await fetch(ANTHROPIC_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+  });
+  if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
+  const data = await res.json();
+  return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model };
 }
 
 // ---------------------------------------------------------------- new recipe ideas
