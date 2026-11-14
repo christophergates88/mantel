@@ -198,7 +198,7 @@ async function push(again = 0) {
     const d = await r.json();
     if (d && d.newer) { if (take(d.newer) && again < 2) return push(again + 1); return true; }
     if (d && d.ok) { state.base = sent.updatedAt; delete sent.base; keepBase(sent); movedFrom = ''; keep(); return true; }
-    if (d && d.error && r.status === 400) toast(d.error);
+    if (d && d.error && (r.status === 400 || r.status === 429)) toast(d.error);
   } catch { /* offline: this phone keeps its copy and tries again on the next change or when the signal is back */ }
   return false;
 }

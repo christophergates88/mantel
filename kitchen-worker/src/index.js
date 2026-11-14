@@ -118,6 +118,10 @@ async function morning(env, codes) {
 
 // A kitchen is known once its shared document exists. Only known kitchens can read photos, write recipes or store anything.
 const known = async (env, code) => { if (!/^[a-z0-9]{16,32}$/.test(String(code || ''))) return false; const d = await env.SIMMER_KV.get(`house:${code}`); return !!d && !d.startsWith('{"gone":true'); };
+// One family, one kitchen. A phone keeps the code it started with, but that code can point at the family's kitchen
+// (`alias:<code>` holds the kitchen it really uses), so every phone in the house reads and writes the same document
+// without anyone having to pass a link around. Every route looks a code up here first.
+const home = async (env, code) => { code = String(code || ''); return /^[a-z0-9]{16,32}$/.test(code) ? (await env.SIMMER_KV.get(`alias:${code}`)) || code : ''; };
 // Daily allowances, per kitchen and overall. KV counters can be outrun by a burst of simultaneous requests, so the real
 // ceiling on spending is the limit set on the API key itself; these stop ordinary overuse and slow abuse.
 async function allowance(env, what, code, perHouse, overall) {
@@ -174,7 +178,8 @@ async function handle(request, env) {
     if (house) {
       if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
       if (!env.SIMMER_KV) return json({ error: 'sharing is not set up' }, 503);
-      const key = `house:${house[1]}`;
+      const code = await home(env, house[1]);
+      const key = `house:${code}`;
       if (request.method === 'GET') {
         const doc = await env.SIMMER_KV.get(key);
         return new Response(doc || 'null', { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cors } });
@@ -190,9 +195,23 @@ async function handle(request, env) {
         // Someone else saved since this phone last looked: hand back their copy instead of overwriting it.
         if (cur && (cur.updatedAt > doc.updatedAt || (typeof doc.base === 'number' && cur.updatedAt > doc.base))) return json({ ok: false, newer: cur });
         if (!cur) {
-          // A brand-new kitchen. A phone moving to a new link names its old kitchen; otherwise only a few may start each day.
+          // A brand-new kitchen. A phone moving to a new link names its old kitchen.
           const from = url.searchParams.get('from');
-          if (!(from && await known(env, from)) && !(await allowance(env, 'newhouse', 'all', 4, 4))) return json({ error: 'Too many new kitchens were started today. Try again tomorrow.' }, 429);
+          if (!(from && await known(env, await home(env, from)))) {
+            // A phone opening Simmer for the first time. While the family's door is open (`family`: their kitchen, how many
+            // more phones may walk in, and until when), it joins their kitchen instead of starting an empty one of its own.
+            const fam = JSON.parse((await env.SIMMER_KV.get('family')) || 'null');
+            if (fam && fam.left > 0 && Date.now() < fam.until && fam.code !== code) {
+              const theirs = JSON.parse((await env.SIMMER_KV.get(`house:${fam.code}`)) || 'null');
+              if (theirs && !theirs.gone) {
+                await env.SIMMER_KV.put(`alias:${code}`, fam.code);
+                await env.SIMMER_KV.put('family', JSON.stringify({ ...fam, left: fam.left - 1 }));
+                return json({ ok: false, newer: theirs });
+              }
+            }
+            // Otherwise only a few new kitchens may start each day.
+            if (!(await allowance(env, 'newhouse', 'all', 4, 4))) return json({ error: 'Too many new kitchens were started today. Try again tomorrow.' }, 429);
+          }
         }
         delete doc.base;
         await env.SIMMER_KV.put(key, JSON.stringify(doc));
@@ -200,9 +219,9 @@ async function handle(request, env) {
       }
       if (request.method === 'DELETE') {
         // The family made a new link: retire this kitchen, its photos and its reminders. Phones still on it are told to ask for the new link.
-        const list = await env.SIMMER_KV.list({ prefix: `photo:${house[1]}:` });
+        const list = await env.SIMMER_KV.list({ prefix: `photo:${code}:` });
         await Promise.all(list.keys.map(k => env.SIMMER_KV.delete(k.name)));
-        await env.SIMMER_KV.delete(`push:${house[1]}`);
+        await env.SIMMER_KV.delete(`push:${code}`);
         await env.SIMMER_KV.put(key, JSON.stringify({ gone: true, updatedAt: Date.now() }), { expirationTtl: 90 * 86400 });
         return json({ ok: true });
       }
@@ -212,20 +231,21 @@ async function handle(request, env) {
     // A family's own photo of a dish: stored per household, shown on both phones.
     const photo = url.pathname.match(/^\/photo\/([a-z0-9]{16,32})\/([a-z0-9_-]{1,80})$/);
     if (photo && env.SIMMER_KV) {
-      const key = `photo:${photo[1]}:${photo[2]}`;
+      const kitchen = await home(env, photo[1]);
+      const key = `photo:${kitchen}:${photo[2]}`;
       if (request.method === 'GET') {
         const img = await env.SIMMER_KV.get(key, 'arrayBuffer');
         if (!img) return new Response('not found', { status: 404 });
         return new Response(img, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' } });
       }
       if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
-      if (!(await known(env, photo[1]))) return json({ error: 'This kitchen is not set up yet. Open Simmer and try again.' }, 403);
+      if (!(await known(env, kitchen))) return json({ error: 'This kitchen is not set up yet. Open Simmer and try again.' }, 403);
       if (request.method === 'DELETE') { await env.SIMMER_KV.delete(key); return json({ ok: true }); }
       if (request.method === 'PUT') {
         const body = await request.arrayBuffer();
         const b = new Uint8Array(body);
         if (b.length < 100 || b.length > 400000 || b[0] !== 0xff || b[1] !== 0xd8) return json({ error: 'That photo could not be saved.' }, 400);
-        if (!(await allowance(env, 'photo', photo[1], 30, 60))) return json({ error: 'Today\'s limit for dish photos is used up. It resets tomorrow.' }, 429);
+        if (!(await allowance(env, 'photo', kitchen, 30, 60))) return json({ error: 'Today\'s limit for dish photos is used up. It resets tomorrow.' }, 429);
         await env.SIMMER_KV.put(key, body);
         return json({ ok: true });
       }
@@ -238,11 +258,11 @@ async function handle(request, env) {
       // The phone's background helper asks what to show for the nudge it was just sent.
       if (request.method === 'GET' && push[1] === 'now' && push[2]) {
         if (!allowed.includes(origin)) return json({ error: 'not found' }, 404);
-        const msg = JSON.parse((await env.SIMMER_KV.get(`now:${push[2]}`)) || 'null');
+        const msg = JSON.parse((await env.SIMMER_KV.get(`now:${await home(env, push[2])}`)) || 'null');
         return json(msg && Date.now() - msg.at < 6 * 3600e3 ? msg : { title: 'Simmer', body: 'Open Simmer to see tonight\'s dinner.', tag: 'simmer' });
       }
       if (!allowed.includes(origin) || request.method !== 'POST' || !push[2]) return json({ error: 'not found' }, 404);
-      const code = push[2], key = `push:${code}`;
+      const code = await home(env, push[2]), key = `push:${code}`;
       let subs = JSON.parse((await env.SIMMER_KV.get(key)) || '[]');
       if (push[1] === 'test') {
         if (!subs.length) return json({ error: 'No phone has notifications turned on yet.' }, 400);
@@ -284,6 +304,7 @@ async function handle(request, env) {
     if (got.tooBig) return json({ error: 'Those photos are too large. Try fewer at once.' }, 413);
     const body = got.v;
     if (!body) return json({ error: 'bad request' }, 400);
+    body.house = await home(env, body.house);
     if (!(await known(env, body.house))) return json({ error: 'This kitchen is not set up yet. Close Simmer, open it again and retry.' }, 403);
     const kind = body.kind === 'receipt' ? 'receipt' : 'pantry';
     const images = Array.isArray(body.images) ? body.images.filter(s => typeof s === 'string' && /^[A-Za-z0-9+/=]+$/.test(s)).slice(0, 4) : [];
@@ -465,6 +486,7 @@ async function ideas(request, env, json) {
   const got = await bodyJSON(request, 200000);
   const body = got.v;
   if (!body) return json({ error: 'bad request' }, got.tooBig ? 413 : 400);
+  body.house = await home(env, body.house);
   if (!(await known(env, body.house))) return json({ error: 'This kitchen is not set up yet. Close Simmer, open it again and retry.' }, 403);
   const kind = ['dinner', 'breakfast', 'snack'].includes(body.kind) ? body.kind : 'dinner';
   const { catalog, looks, byId } = lists(body);
@@ -517,6 +539,7 @@ async function ownRecipe(request, env, json) {
   if (got.tooBig) return json({ error: 'Those photos are too large. Try one photo.' }, 413);
   const body = got.v;
   if (!body) return json({ error: 'bad request' }, 400);
+  body.house = await home(env, body.house);
   if (!(await known(env, body.house))) return json({ error: 'This kitchen is not set up yet. Close Simmer, open it again and retry.' }, 403);
   const images = Array.isArray(body.images) ? body.images.filter(x => typeof x === 'string' && /^[A-Za-z0-9+/=]+$/.test(x)).slice(0, 3) : [];
   const text = String(body.text || '').replace(/[\u0000-\u0008\u000b-\u001f<>]/g, ' ').trim().slice(0, 6000);

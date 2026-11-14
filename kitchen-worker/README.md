@@ -43,3 +43,12 @@ After changing anything in `/kitchen`, write a new value into `kitchen/version.t
 
 See `PRICES.md` for the weekly Walmart price check and `tools/set-prices.mjs`.
 - `GET|PUT|DELETE /photo/<code>/<recipe id>`: the family's own JPEG for a dish, kept in KV.
+
+## One family, one kitchen
+
+Each phone makes its own kitchen code the first time it opens Simmer. So nobody has to pass a link around, a code can
+point at another kitchen: the KV key `alias:<code>` holds the code of the kitchen that phone really uses, and every
+route looks a code up there first. The KV key `family` (`{ code, left, until }`) opens the door for new phones: while
+`left` is above zero and `until` has not passed, a phone opening Simmer for the first time is pointed at `code`
+instead of starting an empty kitchen. "Make a new link" in the app still retires the shared kitchen for every phone.
+
