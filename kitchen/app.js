@@ -1,7 +1,7 @@
 // Simmer: a slow cooker kitchen for one household. Kept on the phone, and shared between the family's phones.
 // The page's other files are loaded with the same version stamp as this one, so a phone never mixes old and new.
 const V = new URL(import.meta.url).search;
-const { CATALOG, RECIPES, SECTIONS } = await import('./data.js' + V);
+const { CATALOG, RECIPES, SECTIONS, PRICED } = await import('./data.js' + V);
 const { READER_URL } = await import('./config.js' + V);
 const { dish, LOOKS } = await import('./art.js' + V);
 
@@ -395,7 +395,7 @@ function listView() {
     <dl><div><dt>Walmart</dt><dd>${money(shop.w)}</dd></div><div><dt>Ingles</dt><dd>${money(shop.i)}</dd></div></dl>
   </div>
   <button class="btn line wide" data-share-list>Send this list</button>
-  <p class="note">Prices are estimates for Eatonton until a receipt replaces them. Ingles weekly meat specials can beat these.</p>
+  <p class="note">Walmart prices were checked ${PRICED} at the Milledgeville store. Ingles prices are estimates until a receipt replaces them, and its weekly meat specials can beat these.</p>
   <table class="buy">
     <thead><tr><th scope="col">Tick off as you buy</th><th scope="col">Walmart</th><th scope="col">Ingles</th></tr></thead>
     <tbody>${shop.items.map(it => {
