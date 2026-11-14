@@ -245,3 +245,32 @@ img.dish { object-fit: cover; }
 :focus-visible { outline-color: var(--brass-ink); }
 .top :focus-visible, .tabs :focus-visible, .hero :focus-visible, .verdict :focus-visible { outline-color: var(--brass); }
 @media (max-height: 700px) { .hero > .dish { aspect-ratio: 16 / 6.5; } }
+
+/* Added with alerts, freezer packs, notes and the list of recent changes. */
+a.btn { text-decoration: none; }
+.kidrow, .switches li { display: flex; align-items: center; gap: .5rem; }
+.kidrow { margin-top: .9rem; font-size: .9375rem; color: var(--soft); }
+.kidrow span, .switches span { flex: 1; min-width: 0; }
+.kidrow .flip, .switches .flip { color: var(--soft); box-shadow: inset 0 0 0 1.5px var(--edge); background: var(--paper); padding: 0 .8rem; }
+.kidrow .flip[aria-pressed="true"], .switches .flip[aria-pressed="true"] { background: var(--fern); color: #fff; box-shadow: none; }
+.switches li { padding: .65rem 0; border-top: 1px solid var(--line); }
+.switches small { display: block; color: var(--soft); font-size: .875rem; line-height: 1.35; }
+.lately li { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: .55rem 0; border-top: 1px solid var(--line); font-size: .9375rem; line-height: 1.35; }
+.lately li:first-child { border-top: 0; }
+.lately small { flex: none; color: var(--soft); font-size: .875rem; }
+.whose { margin-top: 1rem; padding: 1rem; background: var(--paper); border-radius: 14px; box-shadow: inset 0 0 0 1.5px var(--edge); font-size: .9375rem; }
+.whose .acts { margin-top: .75rem; }
+.little.jobs { margin-top: 1rem; }
+.little.warn { background: #F3E3C8; }
+.notes { margin-top: 1.5rem; }
+.notes textarea { display: block; width: 100%; font: inherit; padding: .6rem .9rem; border: 1.5px solid var(--edge); border-radius: 12px; background: var(--paper); color: var(--ink); resize: vertical; margin-bottom: .6rem; }
+.notes .btn { display: inline-block; }
+.notes + .link { display: block; margin-top: .75rem; }
+.buy td i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--fern); margin-left: 4px; vertical-align: baseline; font-size: 0; }
+.snap.gap { margin-top: 1rem; }
+.foot + .foot { margin-top: .25rem; }
+.safe + .chips.wrap { margin-top: .5rem; }
+.verdict .stock { margin-top: .35rem; }
+.buy tbody tr.sec { border-top: 0; }
+.buy tbody tr.sec th { display: table-cell; padding: 1.1rem 0 .35rem; font: 400 1.125rem/1.2 var(--display); color: var(--walnut); }
+.buy tbody tr.sec + tr { border-top: 1px solid var(--edge); }

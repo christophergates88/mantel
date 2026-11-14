@@ -30,7 +30,16 @@ Upload with `keep_bindings: ["secret_text"]` so the secret is not removed.
 After changing anything in `/kitchen`, write a new value into `kitchen/version.txt` (for example `date +%s > kitchen/version.txt`).
 `boot.js` reads it and loads that version of every file, so phones get the update on the next open.
 
-## Morning reminder and dish photos
+## Alerts and dish photos
 
-- `GET /push/key`, `POST /push/sub|unsub|test/<code>`: Web Push with no message body. The Worker makes and keeps its own signing key in KV (`vapid`). A cron trigger (`*/15 * * * *`) runs `morning()`, which nudges each household once a day at its chosen Eastern time; the phone's `sw.js` then reads that day's line from the shared kitchen document.
+- `GET /push/key`, `POST /push/sub|unsub|test/<code>`, `GET /push/now/<code>`: Web Push with no message body. The Worker makes and keeps its own signing key in KV (`vapid`). The phones work out the alerts (morning plan, start the pot, dinner is ready, thaw tonight) and keep them in the shared kitchen document as `nudges`, each with the moment it is due. A cron trigger (`*/15 * * * *`) runs `tick()`, which sends every nudge that has come due in the last two hours, once. The message is stored under `now:<code>`; the phone's `sw.js` fetches it from `/push/now` and shows it. A kitchen document with no `nudges` (a phone that has not opened the newer app) still gets the plain morning message.
+- `POST /push/test/<code>` answers with each phone's push service, status and reason, so the app can say why a test failed.
+
+## The family's own recipes
+
+`POST /recipe` takes a photo of a recipe card or page, or pasted text, and returns it in the app's recipe format without changing how it is cooked. It shares the daily allowance with `/ideas`. A dinner that is not made in a slow cooker is turned down with a reason. Added sugar is kept but flagged in `note`.
+
+## Prices
+
+See `PRICES.md` for the weekly Walmart price check and `tools/set-prices.mjs`.
 - `GET|PUT|DELETE /photo/<code>/<recipe id>`: the family's own JPEG for a dish, kept in KV.

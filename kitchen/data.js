@@ -1,8 +1,10 @@
 // Simmer: the ingredient catalog and the recipes.
-// Walmart prices were read from walmart.com on the date in PRICED, for the Milledgeville store (the site's nearest to Eatonton).
+// Walmart prices were read from walmart.com on the date in PRICED, with the store set to the Eatonton Supercenter (#5482).
 // Ingles prices are ESTIMATES: Ingles shows no prices online without an account, so each is the Walmart price marked up by a typical gap.
-// A receipt photo replaces either with the price actually paid.
+// A receipt photo replaces either with the price actually paid, and after a few Ingles receipts the app sets the
+// remaining Ingles estimates from what those receipts show.
 export const PRICED = 'Nov 14';
+export const PRICED_ON = '2026-11-14';
 
 export const SECTIONS = ['Meat', 'Produce', 'Cans and jars', 'Dairy and frozen', 'Grains', 'Staples'];
 
@@ -11,7 +13,7 @@ export const CATALOG = {
   chickenThighs:  ['Chicken thighs, boneless skinless', 'Meat', 10.98, 13.44, 'about 2.8 lb tray'],
   chickenBreast:  ['Chicken breasts, boneless skinless', 'Meat', 11.15, 13.73, 'about 5 lb family pack'],
   chuckRoast:     ['Chuck roast', 'Meat', 28.41, 32.48, 'about 3 lb'],
-  porkShoulder:   ['Pork shoulder, boneless', 'Meat', 11.88, 14.33, 'about 4 lb'],
+  porkShoulder:   ['Pork shoulder, boneless', 'Meat', 14.85, 17.91, 'about 5 lb, the smallest they sell'],
   stewMeat:       ['Beef stew meat', 'Meat', 17.43, 19.64, 'about 2 lb family pack'],
   groundTurkey:   ['Ground turkey, 93% lean', 'Meat', 5.56, 6.36, '1 lb pack'],
   porkTenderloin: ['Pork tenderloin, plain, not marinated', 'Meat', 8.57, 10.53, '2 pack, about 2.4 lb'],
@@ -25,11 +27,11 @@ export const CATALOG = {
   lemon:         ['Lemon', 'Produce', 0.68, 0.93, 'each'],
   lime:          ['Lime', 'Produce', 0.25, 0.38, 'each'],
   orange:        ['Orange', 'Produce', 0.88, 1.00, 'each'],
-  sweetPotatoes: ['Sweet potatoes', 'Produce', 1.95, 2.13, '3 lb bag'],
+  sweetPotatoes: ['Sweet potatoes', 'Produce', 2.88, 3.15, '3 lb bag'],
   apples:        ['Apples', 'Produce', 3.26, 4.10, '3 lb bag'],
   spinach:       ['Baby spinach', 'Produce', 2.18, 3.29, '6 oz bag'],
   bananas:       ['Bananas', 'Produce', 1.20, 1.51, 'bunch of 6'],
-  bellPeppers:   ['Bell peppers', 'Produce', 3.24, 4.07, 'pack of 3'],
+  bellPeppers:   ['Bell peppers', 'Produce', 2.97, 3.73, 'pack of 3'],
 
   blackBeans:   ['Black beans, no salt added', 'Cans and jars', 0.92, 1.19, '15 oz can'],
   kidneyBeans:  ['Kidney beans, no salt added', 'Cans and jars', 0.92, 1.19, '15 oz can'],
@@ -43,16 +45,16 @@ export const CATALOG = {
   chickenBroth: ['Chicken broth, low sodium, no sugar added', 'Cans and jars', 1.54, 2.17, '32 oz'],
   beefBroth:    ['Beef broth, low sodium, no sugar added', 'Cans and jars', 1.50, 2.11, '32 oz'],
   coconutMilk:  ['Coconut milk, unsweetened', 'Cans and jars', 2.18, 2.91, '13.5 oz can'],
-  balsamic:     ['Balsamic vinegar (not glaze)', 'Cans and jars', 3.88, 4.78, 'bottle'],
+  balsamic:     ['Balsamic vinegar (not glaze)', 'Cans and jars', 3.92, 4.83, 'bottle'],
   dijon:        ['Dijon mustard, no sugar added', 'Cans and jars', 1.77, 2.40, 'jar'],
-  peanutButter: ['Peanut butter, just peanuts and salt', 'Cans and jars', 2.98, 3.94, '16 oz jar'],
+  peanutButter: ['Peanut butter, just peanuts and salt', 'Cans and jars', 4.12, 4.98, '16 oz jar (Smucker\'s Natural)'],
 
   greekYogurt: ['Plain Greek yogurt', 'Dairy and frozen', 3.28, 4.38, '32 oz tub'],
   mozzarella:  ['Shredded mozzarella', 'Dairy and frozen', 1.97, 2.65, '8 oz'],
   frozenCorn:  ['Frozen corn', 'Dairy and frozen', 0.98, 1.43, '12 oz bag'],
   greenBeans:  ['Frozen green beans', 'Dairy and frozen', 0.98, 1.43, '12 oz bag'],
   eggs:        ['Eggs', 'Dairy and frozen', 1.67, 2.03, 'dozen'],
-  milk:        ['Whole milk', 'Dairy and frozen', 1.94, 2.55, 'half gallon'],
+  milk:        ['Whole milk', 'Dairy and frozen', 2.26, 2.97, 'half gallon'],
   cheddar:     ['Shredded cheddar', 'Dairy and frozen', 1.97, 2.65, '8 oz'],
   blueberries: ['Frozen blueberries', 'Dairy and frozen', 3.24, 4.14, '16 oz bag'],
   broccoli:    ['Frozen broccoli', 'Dairy and frozen', 1.16, 1.67, '12 oz bag'],
@@ -61,8 +63,8 @@ export const CATALOG = {
   pasta:     ['Whole wheat pasta', 'Grains', 1.74, 2.34, '16 oz box'],
   lentils:   ['Dry lentils, brown or green', 'Grains', 1.92, 2.44, '1 lb bag'],
   oats:      ['Rolled oats', 'Grains', 2.72, 3.54, '18 oz canister'],
-  bread:     ['Whole wheat bread, no added sugar', 'Grains', 5.48, 6.49, 'loaf (sprouted loaves in the freezer case qualify)'],
-  tortillas: ['Whole wheat tortillas, no added sugar', 'Grains', 2.76, 3.66, 'pack of 8'],
+  bread:     ['Sprouted whole grain bread, no added sugar', 'Grains', 7.53, 8.49, 'loaf, in the freezer case (Ezekiel 4:9)'],
+  tortillas: ['Whole wheat tortillas, no added sugar', 'Grains', 2.67, 3.54, 'pack of 10'],
 
   salt:        ['Salt', 'Staples', 1.92, 3.07, 'canister', true],
   pepper:      ['Black pepper', 'Staples', 3.58, 5.04, 'jar', true],
@@ -77,7 +79,40 @@ export const CATALOG = {
   bakingPowder:['Baking powder', 'Staples', 2.08, 3.22, 'can', true],
 };
 
-// ings: [catalog id, amount in the pot, packages to buy (default 1)]
+// The walmart.com item each Walmart price was read from, so the prices can be re-checked and the shopping list can
+// be sent to a Walmart cart. A plain id means the listed price is used. ['id', 'lb', n] prices n pounds at the
+// per-pound price; ['id', 'each', n] prices n of them.
+export const WM = {
+  chickenThighs: '778091348', chickenBreast: '27935840', chuckRoast: ['318012501', 'lb', 3], porkShoulder: ['556116979', 'lb', 5], stewMeat: '39944484',
+  groundTurkey: '19593628', porkTenderloin: '895966481', turkeyBreast: '17247616', porkLoin: '20934757',
+  potatoes: '44391123', carrots: '10535757', onion: '51259212', garlic: '44391100', lemon: '41752773', lime: '44391008', orange: '162577028',
+  sweetPotatoes: '132720824', apples: '44390958', spinach: '34017490', bananas: ['44390948', 'each', 6], bellPeppers: '47770124',
+  blackBeans: '39778876', kidneyBeans: '32250872', whiteBeans: '10534042', salsa: '1959652540', salsaVerde: '10292961', dicedTomatoes: '10416052',
+  tomatoPaste: '10415519', greenChiles: '3637149143', marinara: '31008715', chickenBroth: '44391066', beefBroth: '312850691', coconutMilk: '1522874513',
+  balsamic: '128822499', dijon: '10315545', peanutButter: '10308119',
+  greekYogurt: '26559565', mozzarella: '10452419', frozenCorn: '659879040', greenBeans: '576704015', eggs: '145051970', milk: '10450118',
+  cheddar: '10452370', blueberries: '13252699', broccoli: '735585383',
+  brownRice: '10898755', pasta: '45653171', lentils: '545884744', oats: '10315761', bread: '196260377', tortillas: '749959517',
+  salt: '10448936', pepper: '44662573', oliveOil: '10315102', cumin: '985501095', chiliPowder: '157643393', oregano: '631368530', italian: '637648335',
+  garlicPowder: '676979470', curry: '685605242', cinnamon: '533272737', bakingPowder: '16627955',
+};
+
+// How much one package holds, in the units recipes use. With this, two dinners that each use part of a package
+// (2 lb of chicken from a 5 lb pack, a cup of broth from a carton) share one on the shopping list.
+export const SIZE = {
+  chickenThighs: { lb: 2.8 }, chickenBreast: { lb: 5 }, chuckRoast: { lb: 3 }, porkShoulder: { lb: 5 }, stewMeat: { lb: 2 }, groundTurkey: { lb: 1 },
+  porkTenderloin: { lb: 2.4 }, turkeyBreast: { lb: 3 }, porkLoin: { lb: 4 },
+  potatoes: { lb: 1.5 }, carrots: { lb: 2, each: 10 }, onion: { each: 1 }, garlic: { clove: 10 }, lemon: { each: 1 }, lime: { each: 1 }, orange: { each: 1 },
+  sweetPotatoes: { lb: 3 }, apples: { lb: 3, each: 8 }, spinach: { bag: 1, handful: 6 }, bananas: { each: 6 }, bellPeppers: { each: 3 },
+  blackBeans: { can: 1 }, kidneyBeans: { can: 1 }, whiteBeans: { can: 1 }, salsa: { cup: 2, jar: 1 }, salsaVerde: { cup: 2, jar: 1 }, dicedTomatoes: { can: 1 },
+  tomatoPaste: { can: 1 }, greenChiles: { can: 1 }, marinara: { jar: 1 }, chickenBroth: { cup: 4, oz: 32 }, beefBroth: { cup: 4, oz: 32 }, coconutMilk: { can: 1 },
+  balsamic: { cup: 1 }, dijon: { tbsp: 20 }, peanutButter: { cup: 1.75 },
+  greekYogurt: { cup: 4 }, mozzarella: { oz: 8, cup: 2 }, frozenCorn: { bag: 1 }, greenBeans: { bag: 1 }, eggs: { each: 12 }, milk: { cup: 8 }, cheddar: { cup: 2, oz: 8 },
+  blueberries: { cup: 3 }, broccoli: { bag: 1, oz: 12 },
+  brownRice: { cup: 4.5 }, pasta: { oz: 16 }, lentils: { lb: 1 }, oats: { cup: 6 }, bread: { slice: 20 }, tortillas: { each: 10 },
+};
+
+// ings: [catalog id, amount in the pot, packages to buy (worked out from SIZE when not given)]
 export const RECIPES = [
   {
     id: 'pot-roast', name: 'Sunday pot roast', hours: 9, serves: 6, protein: 40,
@@ -92,7 +127,7 @@ export const RECIPES = [
   {
     id: 'carnitas', name: 'Citrus pulled pork', hours: 9, serves: 8, protein: 29,
     blurb: 'Orange and lime instead of a sugary sauce. Good in bowls, wraps or on its own.',
-    ings: [['porkShoulder', '3 to 4 lb'], ['orange', 'juice of 2', 2], ['lime', 'juice of 2', 2], ['garlic', '5 cloves, minced'],
+    ings: [['porkShoulder', '4 to 5 lb'], ['orange', 'juice of 2', 2], ['lime', 'juice of 2', 2], ['garlic', '5 cloves, minced'],
            ['cumin', '1 tbsp'], ['oregano', '2 tsp'], ['salt', '1 tsp']],
     steps: ['Rub the pork with cumin, oregano and salt. Put it in the pot with the garlic.',
             'Squeeze the oranges and limes over the top.',
@@ -131,10 +166,10 @@ export const RECIPES = [
   },
   {
     id: 'turkey-chili', name: 'Turkey and bean chili', hours: 8, serves: 6, protein: 35,
-    blurb: 'Lean and filling. A few minutes to brown the turkey, then hands off.',
+    blurb: 'Lean and filling. The turkey browns while you open the cans, then it is hands off.',
     ings: [['groundTurkey', '2 lb', 2], ['blackBeans', '1 can, drained'], ['kidneyBeans', '1 can, drained'], ['dicedTomatoes', '2 cans', 2],
            ['tomatoPaste', '1 can'], ['onion', '1, diced'], ['chiliPowder', '2 tbsp'], ['cumin', '1 tbsp'], ['salt', '1 tsp']],
-    steps: ['Brown the turkey in a pan, 5 to 8 minutes, and tip it straight into the pot. Do not brown it ahead of time.',
+    steps: ['Brown the turkey in a pan, 5 to 8 minutes, and tip it straight into the pot. Dice the onion and open the cans while it browns. Do not brown it ahead of time.',
             'Add everything else and stir.',
             'Cook on low 8 hours.'],
     little: 'Ground turkey is already small. Mash the beans.',
@@ -194,12 +229,12 @@ export const RECIPES = [
   {
     id: 'coconut-chicken', name: 'Coconut chicken and sweet potato', hours: 6, serves: 6, protein: 28,
     blurb: 'A gentle curry. Mild enough for the high chair.',
-    ings: [['chickenThighs', '2 lb'], ['sweetPotatoes', '2 lb, cubed'], ['coconutMilk', '1 can'], ['spinach', '1 bag'],
+    ings: [['chickenThighs', '2 lb'], ['sweetPotatoes', '2 lb, scrubbed, in 1-inch chunks, skin on'], ['coconutMilk', '1 can'], ['spinach', '1 bag'],
            ['curry', '1 tbsp'], ['salt', '1 tsp']],
     steps: ['Sweet potatoes on the bottom, chicken on top.',
             'Whisk the curry powder and salt into the coconut milk and pour it over.',
             'Cook on low 6 hours. Stir in the spinach at the end.'],
-    little: 'Mash the sweet potato into the sauce and shred the chicken through it.',
+    little: 'Slip the skin off a few pieces of sweet potato, mash them into the sauce and shred the chicken through it.',
   },
   {
     id: 'turkey-breast', name: 'Garlic herb turkey breast', hours: 5, serves: 8, protein: 39,
@@ -225,12 +260,12 @@ export const RECIPES = [
   {
     id: 'pork-apples', name: 'Pork tenderloin with apples', hours: 3, serves: 5, protein: 36,
     blurb: 'Apples and sweet potato bring the sweetness. Nothing added.',
-    ings: [['porkTenderloin', '2 lb'], ['apples', '2, sliced'], ['sweetPotatoes', '2 lb, in half-inch cubes'], ['dijon', '2 tbsp'],
+    ings: [['porkTenderloin', '2 lb'], ['apples', '2, cored and sliced'], ['sweetPotatoes', '2 lb, scrubbed, halved the long way and sliced half an inch thick'], ['dijon', '2 tbsp'],
            ['cinnamon', '1/2 tsp'], ['salt', '1 tsp']],
     steps: ['Sweet potatoes and apples in the pot, with the cinnamon and a quarter cup of water.',
             'Rub the pork with the mustard and salt and set it on top.',
             'Cook on low 3 to 3.5 hours, until the pork reaches 145°F and the sweet potato is soft. Rest 5 minutes, then slice.'],
-    little: 'The apples and sweet potato mash together. Chop the pork small.',
+    little: 'The apples and sweet potato mash together; pick out the skins. Chop the pork small.',
   },
   {
     id: 'fajita-bowls', name: 'Chicken fajita bowls', hours: 6, serves: 6, protein: 31,
@@ -257,17 +292,17 @@ export const RECIPES = [
   {
     id: 'sweet-potato-chili', name: 'Beef and sweet potato chili', hours: 8, serves: 6, protein: 33,
     blurb: 'No beans. Sweet potato thickens it and takes the edge off the spice.',
-    ings: [['stewMeat', '2 lb'], ['sweetPotatoes', '2 lb, cubed'], ['dicedTomatoes', '2 cans', 2], ['tomatoPaste', '1 can'], ['onion', '1, diced'],
+    ings: [['stewMeat', '2 lb'], ['sweetPotatoes', '2 lb, scrubbed, in 1-inch chunks, skin on'], ['dicedTomatoes', '2 cans', 2], ['tomatoPaste', '1 can'], ['onion', '1, diced'],
            ['chiliPowder', '2 tbsp'], ['cumin', '1 tbsp'], ['salt', '1 tsp']],
     steps: ['Add everything to the pot and stir.',
             'Cook on low 8 hours.',
-            'Break the beef up with a spoon before serving.'],
-    little: 'Mash the sweet potato and shred the beef into it.',
+            'Break the beef and sweet potato up with a spoon before serving.'],
+    little: 'Mash the sweet potato, picking out the skins, and shred the beef into it.',
   },
   {
     id: 'verde-pork', name: 'Salsa verde pulled pork', hours: 9, serves: 8, protein: 29,
     blurb: 'Three main ingredients. The salsa brings the salt, so none is added.',
-    ings: [['porkShoulder', '3 to 4 lb'], ['salsaVerde', '1 jar'], ['onion', '1, sliced'], ['garlic', '4 cloves, minced'], ['cumin', '1 tbsp']],
+    ings: [['porkShoulder', '4 to 5 lb'], ['salsaVerde', '1 jar'], ['onion', '1, sliced'], ['garlic', '4 cloves, minced'], ['cumin', '1 tbsp']],
     steps: ['Onion and garlic in the pot, pork on top. Rub with the cumin.',
             'Pour the salsa over.',
             'Cook on low 9 hours. Shred, then stir back into just enough sauce to coat it.'],
@@ -278,7 +313,7 @@ export const RECIPES = [
     blurb: 'Thick enough for tortillas. A few minutes to brown the turkey first.',
     ings: [['groundTurkey', '2 lb', 2], ['blackBeans', '1 can, drained'], ['dicedTomatoes', '1 can'], ['tomatoPaste', '1 can'], ['frozenCorn', '1 bag'],
            ['chiliPowder', '2 tbsp'], ['cumin', '1 tbsp'], ['garlicPowder', '1 tsp'], ['salt', '1 tsp']],
-    steps: ['Brown the turkey in a pan, 5 to 8 minutes, and tip it straight into the pot. Do not brown it ahead of time.',
+    steps: ['Brown the turkey in a pan, 5 to 8 minutes, and tip it straight into the pot. Open the cans while it browns. Do not brown it ahead of time.',
             'Add everything else plus a quarter cup of water and stir.',
             'Cook on low 6 hours. Stir well; it should be thick, not saucy.'],
     little: 'Already small. Flatten the beans and corn with a fork.',
@@ -326,7 +361,7 @@ export const RECIPES = [
   {
     id: 'chicken-sp-chili', name: 'Chicken, black bean and sweet potato chili', hours: 5, serves: 6, protein: 38,
     blurb: 'High protein and thick. The sweet potato breaks down into the sauce.',
-    ings: [['chickenBreast', '2 lb'], ['blackBeans', '2 cans, drained', 2], ['sweetPotatoes', '1 lb, cubed small'], ['dicedTomatoes', '1 can'],
+    ings: [['chickenBreast', '2 lb'], ['blackBeans', '2 cans, drained', 2], ['sweetPotatoes', '1 lb, scrubbed, cubed small, skin on'], ['dicedTomatoes', '1 can'],
            ['chickenBroth', '1 cup'], ['chiliPowder', '1 tbsp'], ['cumin', '1 tbsp'], ['salt', '1 tsp']],
     steps: ['Add everything to the pot.',
             'Cook on low 4 to 5 hours.',
@@ -415,7 +450,7 @@ export const RECIPES = [
     ings: [['groundTurkey', '1 lb'], ['carrots', '1 large, grated fine'], ['oats', '1/2 cup'], ['eggs', '1'], ['garlicPowder', '1/2 tsp']],
     steps: ['Heat the oven to 400°F and line a baking sheet with parchment.',
             'Mix everything with a fork.',
-            'Roll into small balls, about a tablespoon each.',
+            'Drop tablespoon-size mounds onto the sheet with two spoons. No need to roll them round.',
             'Bake 15 to 16 minutes, until cooked through (165°F inside).'],
     keeps: 'Fridge 3 days. Freezer 2 months.',
     little: 'Reheat until hot all the way through, let cool, then cut each one into quarters.',
@@ -506,3 +541,20 @@ export const RECIPES = [
     little: 'Warm, let cool, and cut a wedge into small pieces. They should be soft, not crisp.',
   },
 ];
+
+// For each recipe: hands-on minutes before it cooks; nights a frozen roast needs in the fridge (thaw, default 1 for
+// anything with meat); and, where the dinner works as a freezer pack, the ingredients that stay OUT of the bag.
+const EXTRA = {
+  'pot-roast': { prep: 10, thaw: 2, pack: ['potatoes'] }, 'carnitas': { prep: 8, thaw: 2, pack: [] }, 'beef-chili': { prep: 6, pack: [] },
+  'beef-stew': { prep: 10, pack: ['potatoes'] }, 'barbacoa': { prep: 5, thaw: 2, pack: [] }, 'turkey-chili': { prep: 10 }, 'lentil-stew': { prep: 10, thaw: 0 },
+  'burrito-bowl': { prep: 5, pack: ['frozenCorn', 'brownRice'] }, 'balsamic-chicken': { prep: 7, pack: ['potatoes', 'greenBeans'] }, 'greek-chicken': { prep: 8, pack: ['potatoes'] },
+  'white-chili': { prep: 5, pack: ['greekYogurt'] }, 'coconut-chicken': { prep: 8, pack: ['spinach'] }, 'turkey-breast': { prep: 8, thaw: 2 },
+  'chicken-marinara': { prep: 3, pack: ['mozzarella', 'pasta'] }, 'pork-apples': { prep: 9 }, 'fajita-bowls': { prep: 8, pack: ['brownRice'] },
+  'tuscan-chicken': { prep: 5, pack: ['spinach'] }, 'sweet-potato-chili': { prep: 9, pack: [] }, 'verde-pork': { prep: 5, thaw: 2, pack: [] }, 'turkey-taco': { prep: 10 },
+  'cacciatore': { prep: 9, pack: ['pasta'] }, 'pork-loin': { prep: 10, thaw: 2, pack: ['potatoes'] }, 'italian-beef': { prep: 6, thaw: 2, pack: [] },
+  'peanut-chicken': { prep: 6, pack: ['spinach', 'lime', 'brownRice'] }, 'chicken-sp-chili': { prep: 8, pack: [] },
+  'banana-pancakes': { prep: 15 }, 'egg-cups': { prep: 8 }, 'oat-cups': { prep: 8 }, 'french-toast': { prep: 10 }, 'yogurt-muffins': { prep: 8 }, 'oat-cookies': { prep: 6 },
+  'pb-bars': { prep: 8 }, 'turkey-meatballs': { prep: 10 }, 'broccoli-bites': { prep: 10 }, 'sweet-potato-sticks': { prep: 10 }, 'yogurt-drops': { prep: 10 },
+  'applesauce': { prep: 8 }, 'apple-oat-squares': { prep: 8 }, 'turkey-patties': { prep: 10 }, 'blueberry-bars': { prep: 8 }, 'bean-quesadillas': { prep: 8 },
+};
+for (const r of RECIPES) Object.assign(r, EXTRA[r.id]);

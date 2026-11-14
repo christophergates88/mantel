@@ -17,5 +17,8 @@ The fonts are SF Pro Rounded on Apple devices and a self-hosted copy of Nunito e
 ## Simmer (`/kitchen`)
 
 A separate, unlisted page: a slow cooker kitchen app for one household (recipes, what's in the house, a shopping
-list priced for Walmart and Ingles). It keeps its data on the phone that opens it. Its photo buttons use the small
-server in `/kitchen-worker`; see the README there.
+list priced for Walmart and Ingles). It keeps its data on the phone that opens it and shares it between the family's
+phones through the small server in `/kitchen-worker` (photo reading, recipe writing, alerts); see the README there.
+It works with no signal once it has been opened: `kitchen/sw.js` keeps a copy on the phone, and changes made offline
+are combined with the other phone's when the signal is back. Walmart prices are re-read weekly as described in
+`kitchen-worker/PRICES.md`.

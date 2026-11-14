@@ -1,7 +1,7 @@
 // Simmer: a slow cooker kitchen for one household. Kept on the phone, and shared between the family's phones.
 // The page's other files are loaded with the same version stamp as this one, so a phone never mixes old and new.
 const V = new URL(import.meta.url).search;
-const { CATALOG, RECIPES, SECTIONS, PRICED } = await import('./data.js' + V);
+const { CATALOG, RECIPES, SECTIONS, PRICED, PRICED_ON, WM, SIZE } = await import('./data.js' + V);
 const { READER_URL } = await import('./config.js' + V);
 const { dish, LOOKS } = await import('./art.js' + V);
 
@@ -26,13 +26,17 @@ const slug = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^
 
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => dayKey(new Date());
-function week() {
+// The next two weeks, starting today. Most of the app looks at the first seven days; the planner can look at both weeks.
+function days(n = 14) {
   const out = [];
-  for (let i = 0; i < 7; i++) { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); out.push({ key: dayKey(d), date: d, i }); }
+  for (let i = 0; i < n; i++) { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); out.push({ key: dayKey(d), date: d, i }); }
   return out;
 }
-const dayName = d => d.i === 0 ? 'Tonight' : d.i === 1 ? 'Tomorrow' : d.date.toLocaleDateString('en-US', { weekday: 'long' });
-const dayShort = d => d.i === 0 ? 'Tonight' : d.date.toLocaleDateString('en-US', { weekday: 'short' });
+const week = () => days(7);
+const wd = (d, len) => d.date.toLocaleDateString('en-US', { weekday: len });
+const dayName = d => d.i === 0 ? 'Tonight' : d.i === 1 ? 'Tomorrow' : d.i < 7 ? wd(d, 'long') : d.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+const dayShort = d => d.i === 0 ? 'Tonight' : d.i < 7 ? wd(d, 'short') : `${wd(d, 'short')} ${d.date.getDate()}`;
+const ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 2 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} hr ago` : `${Math.round(m / 1440)} ${Math.round(m / 1440) === 1 ? 'day' : 'days'} ago`; };
 const clock = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 function dinnerAt() {
   const [h, m] = (state.dinner || '17:30').split(':').map(Number);
@@ -41,7 +45,7 @@ function dinnerAt() {
 
 // ---------------------------------------------------------------- state
 
-const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'prices', 'dinner', 'cooking', 'mine', 'items', 'rot', 'rate', 'last', 'log', 'low', 'photos', 'left', 'todo', 'brief', 'briefs', 'updatedAt'];
+const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'packs', 'prices', 'dinner', 'cooking', 'mine', 'items', 'rot', 'rate', 'kid', 'notes', 'last', 'log', 'low', 'photos', 'left', 'todo', 'acts', 'alerts', 'thaws', 'brief', 'briefs', 'nudges', 'updatedAt'];
 function newCode() {
   const a = new Uint8Array(20); crypto.getRandomValues(a);
   return [...a].map(n => 'abcdefghjkmnpqrstuvwxyz23456789'[n % 31]).join('');
@@ -49,7 +53,7 @@ function newCode() {
 function fresh() {
   const have = {};
   for (const id in CATALOG) if (CATALOG[id][5]) have[id] = true; // the spice shelf starts stocked
-  return { have, extra: [], plan: {}, prep: [], stash: {}, mine: [], items: {}, rot: {}, rate: {}, last: null, log: [], low: {}, left: {}, todo: [], photos: {}, brief: '07:00', briefs: {}, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
+  return { have, extra: [], plan: {}, prep: [], stash: {}, packs: {}, mine: [], items: {}, rot: {}, rate: {}, kid: {}, notes: {}, last: null, log: [], low: {}, left: {}, todo: [], acts: [], photos: {}, alerts: {}, thaws: {}, brief: '07:00', briefs: {}, nudges: [], prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
 }
 function load() {
   try {
@@ -81,7 +85,9 @@ function hydrate() {
   for (const it of ideas) if (ok(it.recipe)) RECIPES.push({ ...it.recipe, idea: true });
 }
 function tidy() {
-  for (const k of ['plan', 'stash', 'items', 'rot', 'rate', 'low', 'photos', 'briefs', 'left']) if (!state[k] || typeof state[k] !== 'object') state[k] = {};
+  for (const k of ['plan', 'stash', 'packs', 'items', 'rot', 'rate', 'kid', 'notes', 'low', 'photos', 'briefs', 'left', 'alerts', 'thaws', 'prices', 'have']) if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {};
+  state.extra = (Array.isArray(state.extra) ? state.extra : []).filter(t => typeof t === 'string');
+  state.acts = (Array.isArray(state.acts) ? state.acts : []).filter(a => a && Number.isFinite(a.t) && typeof a.m === 'string').sort((a, b) => a.t - b.t).slice(-40);
   if (!Array.isArray(state.mine)) state.mine = [];
   if (!Array.isArray(state.log)) state.log = [];
   state.todo = (Array.isArray(state.todo) ? state.todo : []).filter(t => typeof t === 'string').slice(0, 60);
@@ -89,7 +95,9 @@ function tidy() {
   const real = id => { const r = recipe(id); return r && !r.idea ? r : null; };
   for (const k of Object.keys(state.plan)) if (k < today() || recipe(state.plan[k])?.idea) delete state.plan[k];
   for (const k of Object.keys(state.left)) if (state.plan[k] !== '@leftovers' || !real(state.left[k])) delete state.left[k];
-  state.prep = (Array.isArray(state.prep) ? state.prep : []).filter(id => typeof id === 'string' && !recipe(id)?.idea);
+  for (const k of Object.keys(state.thaws)) if (state.plan[k.slice(0, 10)] !== k.slice(11)) delete state.thaws[k];
+  state.prep = [...new Set((Array.isArray(state.prep) ? state.prep : []).filter(id => typeof id === 'string' && !recipe(id)?.idea))];
+  for (const id of Object.keys(state.packs)) if (!/^\d{4}-\d\d-\d\d$/.test(String(state.packs[id])) || (recipe(id) && !recipe(id).pack)) delete state.packs[id];
   for (const k of Object.keys(state.photos)) state.photos[k] = Number(state.photos[k]) || 0;
   for (const id of Object.keys(state.stash)) if (!/^\d{4}-\d\d-\d\d$/.test(String(state.stash[id]))) delete state.stash[id];
   if (state.cooking && (!Number.isFinite(state.cooking.start) || dayKey(new Date(state.cooking.start)) < today())) state.cooking = null; // yesterday's pot is over
@@ -99,8 +107,9 @@ tidy();
 const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* still works for this visit */ } };
 let pushTimer;
 function save() {
-  state.updatedAt = Date.now();
+  state.updatedAt = Math.max(Date.now(), (state.base || 0) + 1);
   state.briefs = briefs();
+  state.nudges = nudges();
   keep();
   clearTimeout(pushTimer);
   pushTimer = setTimeout(push, 700);
@@ -110,25 +119,87 @@ function save() {
 
 // What this phone last knew the server had (kept on this phone only). A save is refused if someone else saved since.
 const shared = () => ({ ...Object.fromEntries(SHARED.map(k => [k, state[k]])), base: state.base || 0 });
+// A copy of the kitchen as the server last had it. When both phones change things at the same time, or one was out of
+// signal in the store, their changes are combined entry by entry instead of one phone's work being dropped.
+let baseDoc = null;
+try { baseDoc = JSON.parse(localStorage.getItem('simmer.base')); } catch { /* none yet */ }
+const keepBase = doc => {
+  const text = JSON.stringify(doc);
+  baseDoc = JSON.parse(text); // its own copy, so later changes on this phone do not alter it
+  try { localStorage.setItem('simmer.base', text); } catch { /* no room: sharing still works */ }
+};
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const WHOLE = ['cooking', 'last', 'dinner', 'brief']; // settings that change as one piece
+function combine(mine, base, theirs) {
+  const out = {};
+  for (const k of SHARED) {
+    if (['updatedAt', 'briefs', 'nudges'].includes(k)) continue;
+    const l = mine[k], b = base ? base[k] : undefined, r = theirs[k];
+    if (r === undefined || same(r, b)) { out[k] = l; continue; }   // only this phone changed it
+    if (same(l, b)) { out[k] = r; continue; }                      // only the other phone changed it
+    if (Array.isArray(l) && Array.isArray(r)) {                    // a list both changed: additions from both, minus what either removed
+      const id = x => JSON.stringify(x), B = new Set((Array.isArray(b) ? b : []).map(id)), L = new Set(l.map(id)), R = new Set(r.map(id));
+      out[k] = [...r.filter(x => L.has(id(x)) || !B.has(id(x))), ...l.filter(x => !R.has(id(x)) && !B.has(id(x)))];
+      if (k === 'acts') out[k].sort((x, y) => x.t - y.t);
+      if (k === 'log') out[k].sort((x, y) => (x.day < y.day ? -1 : x.day > y.day ? 1 : 0));
+    } else if (!WHOLE.includes(k) && l && r && typeof l === 'object' && typeof r === 'object' && !Array.isArray(l) && !Array.isArray(r)) {
+      const o = { ...r }, bb = b && typeof b === 'object' ? b : {};  // a set of entries both changed: this phone's own changes win, entry by entry
+      for (const e of new Set([...Object.keys(l), ...Object.keys(bb)])) {
+        if (same(l[e], bb[e])) continue;
+        if (e in l) o[e] = l[e]; else delete o[e];
+      }
+      out[k] = o;
+    } else out[k] = l;                                             // one setting changed on both: this phone's stands
+  }
+  return out;
+}
+const actKeys = () => new Set(state.acts.map(a => `${a.t}:${a.w}:${a.n || 1}`));
+// Says what the other phone just did, when there is something to say.
+function announce(seen, fallback) {
+  const a = [...state.acts].reverse().find(x => !seen.has(`${x.t}:${x.w}:${x.n || 1}`) && (x.w || '') !== who);
+  if (a) toast(`${a.w || 'The other phone'} ${actText(a)}`);
+  else if (fallback) toast('Updated from the other phone');
+}
 function adopt(doc) {
   if (doc.gone) { retired = true; return toast('This kitchen\'s link was replaced. Ask for the new link and paste it under Add another phone.'); }
   for (const k of SHARED) if (k in doc) state[k] = doc[k];
   state.base = doc.updatedAt || 0;
+  keepBase(doc);
   tidy();
   keep();
-  if ($('#sheet').hidden && document.activeElement?.id !== 'extra') render(); else stale = true;
+  if ($('#sheet').hidden && !typing()) render(); else stale = true;
 }
+// The server has a newer kitchen than this phone last saw. Returns true when this phone still has changes to send back.
+function take(doc) {
+  if (doc.gone) { adopt(doc); return false; }
+  const seen = actKeys();
+  const dirty = !!state.base && state.updatedAt > state.base;      // this phone changed something the server has not seen
+  if (!dirty || !baseDoc) { adopt(doc); announce(seen, dirty); return false; }
+  const merged = combine(state, baseDoc, doc);
+  for (const k of Object.keys(merged)) state[k] = merged[k];
+  state.base = doc.updatedAt || 0;
+  keepBase(doc);
+  tidy();
+  state.updatedAt = Math.max(Date.now(), state.base + 1);
+  state.briefs = briefs(); state.nudges = nudges();
+  keep();
+  if ($('#sheet').hidden && !typing()) render(); else stale = true;
+  announce(seen, false);
+  return true;
+}
+const typing = () => ['extra', 'todo', 'noteText', 'ownText', 'whoName', 'find'].includes(document.activeElement?.id);
 let firstPull = null, movedFrom = '', retired = false;
-async function push() {
+async function push(again = 0) {
   if (!API || retired) return false;
   try {
     if (firstPull) await firstPull; // never save over the server before having looked at it once
-    const r = await fetch(`${API}/house/${state.house}${movedFrom ? '?from=' + movedFrom : ''}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(shared()) });
+    const sent = shared();
+    const r = await fetch(`${API}/house/${state.house}${movedFrom ? '?from=' + movedFrom : ''}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sent) });
     const d = await r.json();
-    if (d && d.newer) { adopt(d.newer); if (!d.newer.gone) toast('Updated from the other phone'); return true; }
-    if (d && d.ok) { state.base = state.updatedAt; movedFrom = ''; keep(); return true; }
+    if (d && d.newer) { if (take(d.newer) && again < 2) return push(again + 1); return true; }
+    if (d && d.ok) { state.base = sent.updatedAt; delete sent.base; keepBase(sent); movedFrom = ''; keep(); return true; }
     if (d && d.error && r.status === 400) toast(d.error);
-  } catch { /* offline: this phone keeps its copy and tries again on the next change */ }
+  } catch { /* offline: this phone keeps its copy and tries again on the next change or when the signal is back */ }
   return false;
 }
 async function pull() {
@@ -137,16 +208,25 @@ async function pull() {
     const doc = await (await fetch(`${API}/house/${state.house}`)).json();
     retired = !!(doc && doc.gone);
     if (retired) return adopt(doc);
-    if (doc && doc.updatedAt > (state.base || 0)) {
-      const mine = state.updatedAt > (state.base || 0) && state.base; // this phone changed something the server has not seen
-      adopt(doc);
-      if (mine) toast('Updated from the other phone');
-    } else if (!doc || state.updatedAt > (state.base || 0)) { firstPull = null; await push(); }
+    if (doc && doc.updatedAt > (state.base || 0)) { if (take(doc)) { firstPull = null; await push(); } }
+    else if (!doc || state.updatedAt > (state.base || 0)) { firstPull = null; await push(); }
   } catch { /* offline */ }
 }
 const joined = location.hash.match(/house=([a-z0-9]{16,32})/);
 if (joined && joined[1] !== state.house) { state.house = joined[1]; state.updatedAt = 0; state.base = 0; keep(); }
 if (joined) history.replaceState(null, '', location.pathname);
+
+// Whose phone this is (kept on this phone only), so the list of recent changes can say who did what.
+let who = '';
+try { who = (localStorage.getItem('simmer.who') || '').slice(0, 20); } catch { /* no storage */ }
+// Adds a line to the kitchen's recent changes. A run of the same small change (ticking things off) is kept as one line with a count.
+function note(msg, key = '') {
+  const t = Date.now(), last = state.acts[state.acts.length - 1];
+  if (key && last && last.k === key && (last.w || '') === who && t - last.t < 15 * 60000) { last.n = (last.n || 1) + 1; last.t = t; last.m = msg; }
+  else state.acts.push({ t, w: who, m: msg, ...(key ? { k: key } : {}) });
+  state.acts = state.acts.slice(-40);
+}
+const actText = a => String(a.m).replace('#', a.n > 1 ? `${a.n} things` : '1 thing');
 
 let tab = 'home';
 let filter = 'all';
@@ -154,31 +234,62 @@ let canWrite = false; // the recipe writer is only offered once the server says 
 
 // ---------------------------------------------------------------- sums
 
-const price = (id, store) => state.prices[id]?.[store] ?? cat(id)[store];
+// A price paid on a receipt beats the catalog. For Ingles, once a few receipts are in, the remaining estimates follow
+// what this family's own receipts show Ingles charging compared with Walmart.
 const fromReceipt = (id, store) => state.prices[id]?.[store] != null;
-const missing = r => r.ings.filter(([id]) => !state.have[id]);
+function inglesGap() {
+  const gaps = Object.entries(state.prices).filter(([id, p]) => CATALOG[id] && p && p.i > 0).map(([id, p]) => p.i / (p.w > 0 ? p.w : cat(id).w)).sort((a, b) => a - b);
+  return gaps.length < 4 ? 0 : Math.max(0.85, Math.min(1.6, gaps[Math.floor(gaps.length / 2)]));
+}
+let gap = 0; // refreshed on every redraw
+const price = (id, store) => state.prices[id]?.[store] ?? (store === 'i' && gap ? Math.round((state.prices[id]?.w ?? cat(id).w) * gap * 100) / 100 : cat(id)[store]);
+// What a dinner still needs. With a freezer pack made, only the things that stay out of the bag count.
+const packOf = r => (r && r.pack && state.packs[r.id] ? r.pack : null);
+const needs = r => (packOf(r) ? r.ings.filter(([id]) => packOf(r).includes(id)) : r.ings);
+// One pack covers one night: the first night that dinner is planned.
+const packOn = (r, key) => (packOf(r) && days(14).find(d => state.plan[d.key] === r.id)?.key === key ? r.pack : null);
+const missingOn = (r, key) => (packOn(r, key) ? needs(r) : r.ings).filter(([id]) => !state.have[id]);
+const missing = r => needs(r).filter(([id]) => !state.have[id]);
 const haveCount = r => r.ings.length - missing(r).length;
+const meatOf = r => { const g = r.ings.find(([id]) => CATALOG[id] && CATALOG[id][1] === 'Meat'); return g ? CATALOG[g[0]][0].split(',')[0].toLowerCase() : ''; };
+const thawDays = r => (r.kind ? 0 : r.thaw ?? (meatOf(r) ? 1 : 0)); // nights in the fridge a frozen roast or freezer pack needs
+let span = 7; // how many days the shopping list covers
+try { span = localStorage.getItem('simmer.span') === '14' ? 14 : 7; } catch { /* no storage */ }
 const cookingNow = () => state.cooking && recipe(state.cooking.id) && !recipe(state.cooking.id).kind ? state.cooking : null;
 
-// What the next seven dinners still need, with packages added up across recipes.
+// How much of a package a recipe uses, so two dinners that each need part of one share it on the list.
+const UNITS = { lb: 'lb', cup: 'cup', cups: 'cup', oz: 'oz', clove: 'clove', cloves: 'clove', can: 'can', cans: 'can', jar: 'jar', jars: 'jar', bag: 'bag', bags: 'bag', slice: 'slice', slices: 'slice', handful: 'handful', handfuls: 'handful', tbsp: 'tbsp' };
+function share(id, amount, packs) {
+  if (packs) return packs; // the recipe says how many to buy
+  const size = SIZE[id], m = /^(?:juice of )?(\d+ \d\/\d|\d+\/\d|\d+(?:\.\d+)?)(?: to (\d+(?:\.\d+)?))?\s*([a-z]+)?/i.exec(String(amount).trim());
+  if (!size || !m) return 1;
+  const qty = m[2] ? +m[2] : m[1].split(' ').reduce((sum, part) => sum + (part.includes('/') ? part.split('/')[0] / part.split('/')[1] : +part), 0);
+  const per = size[UNITS[(m[3] || '').toLowerCase()] || 'each'];
+  return per && qty > 0 ? qty / per : 1;
+}
+// What the planned dinners still need (this week, or two weeks), with packages added up across recipes.
 function shopping() {
+  gap = inglesGap();
   const need = new Map();
-  for (const d of week()) {
+  const add = (id, packs) => { const cur = need.get(id) || { id, packs: 0 }; cur.packs += packs; need.set(id, cur); };
+  const planned = new Set();
+  for (const d of days(span)) {
     const r = recipe(state.plan[d.key]);
     if (!r || (d.i === 0 && cookingNow()?.id === r.id)) continue;
-    for (const [id, , packs = 1] of r.ings) {
-      if (state.have[id]) continue;
-      const cur = need.get(id) || { id, packs: 0 };
-      cur.packs += packs;
-      need.set(id, cur);
-    }
+    planned.add(r.id);
+    for (const [id, amt, packs] of missingOn(r, d.key)) add(id, share(id, amt, packs));
   }
   for (const id of state.prep) {
-    for (const [iid, , packs = 1] of recipe(id)?.ings || []) {
-      if (state.have[iid] || need.has(iid)) continue; // one package covers the weekend baking
-      need.set(iid, { id: iid, packs });
+    const r = recipe(id);
+    if (!r) continue;
+    if (!r.kind) { // a dinner being made ahead as a freezer pack: what goes in the bag
+      if (!r.pack || planned.has(r.id)) continue;
+      for (const [iid, amt, packs] of r.ings) if (!state.have[iid] && !r.pack.includes(iid)) add(iid, share(iid, amt, packs));
+      continue;
     }
+    for (const [iid, amt, packs] of r.ings) if (!state.have[iid]) add(iid, share(iid, amt, packs));
   }
+  for (const it of need.values()) it.packs = Math.max(1, Math.ceil(it.packs - 1e-6)); // parts of packages round up to whole ones
   for (const id of Object.keys(state.low)) if (CATALOG[id] && !need.has(id)) need.set(id, { id, packs: 1 }); // staples marked as running low
   const items = [...need.values()].sort((a, b) => SECTIONS.indexOf(cat(a.id).section) - SECTIONS.indexOf(cat(b.id).section));
   const total = store => items.reduce((sum, it) => sum + price(it.id, store) * it.packs, 0);
@@ -210,29 +321,71 @@ function briefs() {
   return out;
 }
 
+// The alerts the server should send, each with the moment it is due. Worked out here because the phone knows the
+// plan, the dinner time and what is in the pot; the server only watches the clock.
+const ALERTS = [['morning', 'Morning plan', 'What is for dinner and when the pot goes on.'], ['start', 'Start the pot', '20 minutes before it has to go on, if nobody has tapped It is in the pot.'],
+  ['ready', 'Dinner is ready', 'When the cooking time is up.'], ['thaw', 'Thaw tonight', '8 PM the night before a dinner with meat. Two nights before for big roasts.']];
+const alertOn = k => state.alerts[k] !== false;
+function thawText(r, d, n, nights) {
+  const when = nights > 1 ? `on ${wd(d, 'long')}` : 'tomorrow';
+  const tail = n > 1 ? (nights > 1 ? ' It needs two nights to thaw.' : ' It usually needs two nights, so check it has thawed before it goes in.') : '';
+  return `${r.name} is ${when}. ${packOn(r, d.key) ? 'Move the freezer pack to the fridge tonight.' : `If the ${meatOf(r)} is frozen, move it to the fridge tonight.`}${tail}`;
+}
+// Dinners coming up whose meat should move to the fridge tonight.
+function thawTonight() {
+  return days(3).slice(1).map(d => ({ d, r: recipe(state.plan[d.key]) })).filter(x => x.r && !x.r.kind && thawDays(x.r) >= x.d.i);
+}
+const thawLine = x => `Move the ${packOn(x.r, x.d.key) ? 'freezer pack' : meatOf(x.r)} for ${x.d.i === 1 ? 'tomorrow' : wd(x.d, 'long')}'s ${soft(x.r.name)} to the fridge${packOn(x.r, x.d.key) ? '' : ' if it is frozen'}.`;
+function nudges() {
+  const out = [], now = Date.now(), bs = briefs();
+  const at = (date, hhmm, shift = 0) => { const [h, m] = String(hhmm).split(':').map(Number); const t = new Date(date); t.setDate(t.getDate() + shift); t.setHours(h || 0, m || 0, 0, 0); return t.getTime(); };
+  const pot = cookingNow();
+  for (const d of days(9)) {
+    const r = recipe(state.plan[d.key]);
+    if (d.i < 7 && alertOn('morning') && bs[d.key]) out.push({ k: 'morning', at: at(d.date, state.brief || '07:00'), t: bs[d.key] });
+    if (!r || r.kind || (d.i === 0 && pot && pot.id === r.id)) continue;
+    const dinner = at(d.date, state.dinner || '17:30'), startBy = dinner - r.hours * 36e5;
+    if (d.i < 7 && alertOn('start') && !(d.i === 0 && pot)) out.push({ k: 'start', at: startBy - 20 * 60000, t: `${r.name} needs to be in the pot by ${clock(new Date(startBy))} to eat at ${clock(new Date(dinner))}.` });
+    const n = thawDays(r);
+    if (n && alertOn('thaw')) {
+      // The night is chosen once, when the dinner is first planned: as many nights ahead as it needs, or the soonest night left.
+      const memo = `${d.key}:${r.id}`;
+      if (!state.thaws[memo]) { let k = n; while (k > 1 && at(d.date, '20:00', -k) < now) k--; state.thaws[memo] = at(d.date, '20:00', -k); }
+      out.push({ k: 'thaw', at: state.thaws[memo], t: thawText(r, d, n, Math.round((at(d.date, '20:00') - state.thaws[memo]) / 864e5)) });
+    }
+  }
+  if (pot && alertOn('ready')) { const r = recipe(pot.id); out.push({ k: 'ready', at: pot.start + r.hours * 36e5, t: `${r.name} has had its ${r.hours} hours. Dinner is ready when you are.` }); }
+  // Anything due more than 45 minutes ago has been sent already or missed its moment.
+  return out.filter(n => n.at > now - 45 * 60000).sort((a, b) => a.at - b.at).slice(0, 40);
+}
+
 // Fills the open nights: rotation first, nothing made in the last two weeks, long cooks on weekdays, leftovers after a big roast.
-function autoplan() {
-  const days = week();
+function autoplan(from = 0, to = 7) {
+  const days_ = days(14);
   const used = new Set(Object.values(state.plan));
   const hoursLeft = (dinnerAt() - Date.now()) / 36e5;
   let filled = 0, leftovers = 0, lastMeat = '';
   const undo = snap();
-  for (const d of days) {
-    const prev = recipe(state.plan[days[d.i - 1]?.key]); if (prev) lastMeat = prev.ings[0][0];
+  const meats = {}; // how often each main ingredient is already on this stretch
+  for (const d of days_.slice(from, to)) { const r = recipe(state.plan[d.key]); if (r) meats[r.ings[0][0]] = (meats[r.ings[0][0]] || 0) + 1; }
+  for (const d of days_.slice(from, to)) {
+    const prev = recipe(state.plan[days_[d.i - 1]?.key]); if (prev) lastMeat = prev.ings[0][0];
     if (state.plan[d.key] || (d.i === 0 && cookingNow())) continue;
     const weekday = d.date.getDay() >= 1 && d.date.getDay() <= 5;
     let pool = dinners().filter(r => !used.has(r.id) && (d.i > 0 || r.hours <= hoursLeft + 0.25));
     if (pool.some(r => daysSince(r.id) > 14)) pool = pool.filter(r => daysSince(r.id) > 14);
     if (!pool.length) continue;
-    const score = r => [r.ings[0][0] === lastMeat ? 1 : 0, state.rot[r.id] ? 0 : 1, weekday && r.hours < 8 ? 1 : 0, missing(r).length, -(state.rate[r.id] || 0), -r.protein];
+    const score = r => [r.ings[0][0] === lastMeat ? 1 : 0, state.kid[r.id] === 'no' ? 1 : 0, state.rot[r.id] ? 0 : 1, meats[r.ings[0][0]] || 0, weekday && r.hours < 8 ? 1 : 0, packOf(r) ? 0 : 1, missing(r).length, -(state.rate[r.id] || 0), -r.protein];
     pool.sort((a, b) => { const x = score(a), y = score(b); for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] - y[n]; return 0; });
     const r = pool[0];
     state.plan[d.key] = r.id; used.add(r.id); filled++;
-    const next = days[d.i + 1];
+    meats[r.ings[0][0]] = (meats[r.ings[0][0]] || 0) + 1;
+    const next = d.i + 1 < to ? days_[d.i + 1] : null;
     lastMeat = r.ings[0][0];
     if (r.serves >= 8 && next && !state.plan[next.key] && !leftovers) { state.plan[next.key] = '@leftovers'; state.left[next.key] = r.id; filled++; leftovers++; }
   }
   if (!filled) return toast('Every night already has a plan');
+  note(`planned ${filled} ${filled === 1 ? 'night' : 'nights'}${from ? ' of next week' : ''} with Plan it for me`);
   save(); render();
   toast(`Planned ${filled} ${filled === 1 ? 'night' : 'nights'}`, undo);
 }
@@ -255,7 +408,7 @@ function timing(r) {
 // ---------------------------------------------------------------- views
 
 const stocked = () => Object.keys(CATALOG).filter(id => !id.startsWith('x_') || state.items[id]);
-const prepList = () => state.prep.map(recipe).filter(r => r && r.kind);
+const prepList = () => state.prep.map(recipe).filter(r => r && (r.kind || r.pack));
 const onRotation = () => dinners().filter(r => state.rot[r.id]);
 // Leftovers only name a meal when someone has said which one they are from.
 const leftName = key => { const r = recipe(state.left[key]); return r ? r.name : ''; };
@@ -308,31 +461,36 @@ function homeView() {
       <div class="acts"><button class="btn brass" data-tonight="${r.id}">Make this tonight</button>${spin}<button class="btn ghost" data-pick="${today()}">Pick something else</button></div>`;
   }
   const shop = shopping();
+  const all = days(14);
+  const nextPlanned = all.slice(7).filter(d => state.plan[d.key]).length;
+  const jobs = thawTonight();
+  const stashed = Object.keys(state.stash).filter(recipe), packed = Object.keys(state.packs).filter(recipe);
+  const recent = [...state.acts].reverse().slice(0, 5);
   return `
   <section class="hero">${special || tooLate ? '' : pic(ate || r)}<div class="panel">${body}</div></section>
+  ${jobs.length ? `<p class="little jobs"><b>One job tonight.</b> ${jobs.map(x => esc(thawLine(x))).join(' ')}</p>` : ''}
+  ${who ? '' : `<div class="whose"><p><b>Whose phone is this?</b> Then Simmer can say who changed what.</p>
+    <div class="acts"><button class="btn small" data-who="Katie">Katie</button><button class="btn small" data-who="Chris">Chris</button><button class="btn small line" data-who-ask>Someone else</button></div></div>`}
 
   <h2 class="shelf">The week</h2>
-  <ul class="days">${week().map(d => {
-    const v = state.plan[d.key], p = recipe(v);
-    if (SPECIAL[v]) return `<li class="dayrow"><button class="day" ${v === '@leftovers' && !leftName(d.key) ? `data-leftrow="${d.key}"` : `data-pick="${d.key}"`} aria-label="${dayName(d)}: ${SPECIAL[v]}. ${esc(specialNote(v, d.key))}.">
-      <span class="dn">${dayShort(d)}</span><span class="thumb">${BOX}</span><span class="meal">${SPECIAL[v]}<small>${esc(specialNote(v, d.key))}</small></span></button>
-      <button class="swap" data-pick="${d.key}" aria-label="Change dinner for ${dayName(d)}">Change</button></li>`;
-    return p
-      ? `<li class="dayrow"><button class="day" data-open="${p.id}" aria-label="${dayName(d)}: ${esc(p.name)}. Open the recipe.">
-          <span class="dn">${dayShort(d)}</span><span class="thumb">${pic(p)}</span>
-          <span class="meal">${esc(p.name)}<small>${missing(p).length ? missing(p).length + ' to buy' : 'ready to cook'}</small></span></button>
-          <button class="swap" data-pick="${d.key}" aria-label="Change dinner for ${dayName(d)}">Change</button></li>`
-      : `<li><button class="day" data-pick="${d.key}"><span class="dn">${dayShort(d)}</span><span class="thumb empty"></span><span class="meal none">Add a meal</span></button></li>`; }).join('')}</ul>
-  ${week().some(d => !state.plan[d.key]) ? `<button class="btn line wide" data-autoplan>Plan the open nights for me</button>` : ''}
+  <ul class="days">${all.slice(0, 7).map(dayRow).join('')}</ul>
+  ${all.slice(0, 7).some(d => !state.plan[d.key]) ? `<button class="btn line wide" data-autoplan="this">Plan the open nights for me</button>` : ''}
   ${shop.items.length ? `<button class="btn wide" data-tab="list">${shop.items.length} ${shop.items.length === 1 ? 'thing' : 'things'} to buy, about ${money(Math.min(shop.w, shop.i))}</button>` : ''}
+  <button class="btn line wide" data-next-week aria-expanded="${showNext}">${showNext ? 'Hide next week' : `Next week${nextPlanned ? `: ${nextPlanned} planned` : ''}`}</button>
+  ${showNext ? `<h2 class="shelf">Next week</h2>
+  <ul class="days">${all.slice(7).map(dayRow).join('')}</ul>
+  ${all.slice(7).some(d => !state.plan[d.key]) ? `<button class="btn line wide" data-autoplan="next">Plan next week for me</button>` : ''}` : ''}
 
-  <h2 class="shelf">Weekend prep for ${KID}</h2>
+  <h2 class="shelf">Weekend prep</h2>
   ${prepList().length ? `<ul class="days">${prepList().map(p => `<li><button class="day prep" data-open="${p.id}">
-      <span class="thumb">${pic(p)}</span><span class="meal">${esc(p.name)}<small>${esc(p.method)}${missing(p).length ? `, ${missing(p).length} to buy` : ', ready to make'}</small></span></button></li>`).join('')}</ul>`
-    : `<p class="note">Pick a few breakfasts and snacks to batch on Saturday or Sunday. What they need goes on the shopping list.</p>`}
-  <button class="btn line wide" data-goto="breakfast">Choose breakfasts and snacks</button>
-  ${Object.keys(state.stash).some(recipe) ? `<h2 class="shelf">Made and waiting</h2>
-  <ul class="days">${Object.keys(state.stash).filter(recipe).map(id => { const p = recipe(id); const made = new Date(state.stash[id] + 'T12:00:00');
+      <span class="thumb">${pic(p)}</span><span class="meal">${esc(p.name)}<small>${p.kind ? esc(p.method) : 'Freezer pack'}${prepMissing(p) ? `, ${prepMissing(p)} to buy` : ', ready to make'}</small></span></button></li>`).join('')}</ul>`
+    : `<p class="note">Pick breakfasts and snacks for ${KID} to batch on Saturday or Sunday, or dinners to bag up raw as freezer packs. What they need goes on the shopping list.</p>`}
+  <div class="snap gap"><button class="btn line" data-goto="breakfast">Choose breakfasts and snacks</button><button class="btn line" data-goto-packs>Choose freezer packs</button></div>
+  ${stashed.length || packed.length ? `<h2 class="shelf">Made and waiting</h2>
+  <ul class="days">${packed.map(id => { const p = recipe(id);
+    return `<li class="dayrow"><button class="day prep" data-open="${p.id}"><span class="thumb">${pic(p)}</span>
+      <span class="meal">${esc(p.name)}<small>Freezer pack, frozen ${shortDate(state.packs[id])}. Needs ${thawDays(p) > 1 ? 'two nights' : 'a night'} in the fridge first.</small></span></button>
+      <button class="swap" data-unpack="${p.id}" aria-label="The ${esc(p.name)} freezer pack is used up">Used</button></li>`; }).join('')}${stashed.map(id => { const p = recipe(id); const made = new Date(state.stash[id] + 'T12:00:00');
     return `<li class="dayrow"><button class="day prep" data-open="${p.id}"><span class="thumb">${pic(p)}</span>
       <span class="meal">${esc(p.name)}<small>Made ${made.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}. ${esc(p.keeps)}</small></span></button>
       <button class="swap" data-gone="${p.id}" aria-label="${esc(p.name)} is all gone">All gone</button></li>`; }).join('')}</ul>` : ''}
@@ -343,24 +501,47 @@ function homeView() {
     <button class="btn line" data-snap="receipt">Photograph a receipt</button>
   </div>
 
+  ${recent.length ? `<h2 class="shelf">Lately</h2>
+  <ul class="lately">${recent.map(actRow).join('')}</ul>
+  ${state.acts.length > 5 ? `<button class="link" data-acts>See everything lately</button>` : ''}` : ''}
+
   <div class="foot">
     <button class="link" data-dinner>Dinner at ${clock(dinnerAt())}</button>
     <button class="link" data-share-app>Add another phone</button>
   </div>
-  <div class="foot one"><button class="link" data-morning>Morning reminder: ${pushIsOn() ? clock(new Date(`2000-01-01T${state.brief || '07:00'}:00`)) : 'off'}</button></div>`;
+  <div class="foot">
+    <button class="link" data-morning>Alerts: ${pushIsOn() ? 'on' : 'off'}</button>
+    <button class="link" data-who-ask>${who ? `This phone: ${esc(who)}` : 'Name this phone'}</button>
+  </div>`;
+}
+let showNext = false;
+const shortDate = key => new Date(key + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const prepMissing = p => (p.kind ? missing(p).length : p.ings.filter(([id]) => !p.pack.includes(id) && !state.have[id]).length);
+const actRow = a => `<li><span><b>${a.w ? (a.w === who ? 'You' : esc(a.w)) : 'Someone'}</b> ${esc(actText(a))}</span><small>${ago(a.t)}</small></li>`;
+function dayRow(d) {
+  const v = state.plan[d.key], p = recipe(v);
+  if (SPECIAL[v]) return `<li class="dayrow"><button class="day" ${v === '@leftovers' && !leftName(d.key) ? `data-leftrow="${d.key}"` : `data-pick="${d.key}"`} aria-label="${dayName(d)}: ${SPECIAL[v]}. ${esc(specialNote(v, d.key))}.">
+    <span class="dn">${dayShort(d)}</span><span class="thumb">${BOX}</span><span class="meal">${SPECIAL[v]}<small>${esc(specialNote(v, d.key))}</small></span></button>
+    <button class="swap" data-pick="${d.key}" aria-label="Change dinner for ${dayName(d)}">Change</button></li>`;
+  return p
+    ? `<li class="dayrow"><button class="day" data-open="${p.id}" aria-label="${dayName(d)}: ${esc(p.name)}. Open the recipe.">
+        <span class="dn">${dayShort(d)}</span><span class="thumb">${pic(p)}</span>
+        <span class="meal">${esc(p.name)}<small>${packOn(p, d.key) ? 'freezer pack, ' : ''}${missingOn(p, d.key).length ? missingOn(p, d.key).length + ' to buy' : 'ready to cook'}</small></span></button>
+        <button class="swap" data-pick="${d.key}" aria-label="Change dinner for ${dayName(d)}">Change</button></li>`
+    : `<li><button class="day" data-pick="${d.key}" aria-label="${dayName(d)}: add a meal"><span class="dn">${dayShort(d)}</span><span class="thumb empty"></span><span class="meal none">Add a meal</span></button></li>`;
 }
 
-const FILTERS = [['all', 'All'], ['rotation', 'On rotation'], ['ranked', 'Top rated'], ['allday', 'All day, 8+ hrs'], ['ready', 'Have everything'], ['protein', 'Most protein'], ['few', 'Fewest things']];
+const FILTERS = [['all', 'All'], ['rotation', 'On rotation'], ['ranked', 'Top rated'], ['kid', `${KID} eats it`], ['pack', 'Freezer packs'], ['quick', 'Least prep'], ['allday', 'All day, 8+ hrs'], ['ready', 'Have everything'], ['protein', 'Most protein'], ['few', 'Fewest things']];
 const starText = n => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '';
 
 function recipeRow(r, attr, rank) {
   const m = missing(r).length;
-  const tags = [state.rot[r.id] ? 'On rotation' : '', starText(state.rate[r.id]), madeText(r.id), r.mine ? 'Yours' : ''].filter(Boolean);
+  const tags = [state.rot[r.id] ? 'On rotation' : '', starText(state.rate[r.id]), state.kid[r.id] === 'yes' ? `${KID} eats it` : '', state.packs[r.id] ? 'Pack in the freezer' : '', madeText(r.id), r.mine ? 'Yours' : ''].filter(Boolean);
   return `<li><button class="card" ${attr}>
     <span class="thumb">${pic(r)}</span>
     <span class="txt"><span class="name">${rank ? rank + '. ' : ''}${esc(r.name)}</span>
       ${tags.length ? `<span class="tags">${tags.map(t => `<i>${t}</i>`).join('')}</span>` : ''}
-      <span class="meta">${r.kind ? `${esc(r.method)}. Makes ${esc(r.makes)}` : `${r.hours} hrs on low, about ${r.protein} g protein`}</span>
+      <span class="meta">${r.kind ? `${esc(r.method)}. Makes ${esc(r.makes)}` : `${r.prep ? r.prep + ' min prep, ' : ''}${r.hours} hrs on low, ${r.protein} g protein`}</span>
       <span class="have ${m ? '' : 'ok'}">${m ? `You have ${haveCount(r)} of ${r.ings.length}` : 'You have everything'}</span></span>
   </button></li>`;
 }
@@ -374,7 +555,7 @@ function recipesView() {
   const shelves = `<div class="seg" role="group" aria-label="Kind of recipe">${SHELVES.map(([id, label]) =>
     `<button data-shelf="${id}" aria-pressed="${shelfKind === id}">${label}</button>`).join('')}</div>${finder}`;
   const waiting = RECIPES.filter(r => r.idea).length;
-  const more = canWrite ? `${waiting ? `<button class="btn wide ideas" data-back-ideas>See the ${waiting} new ${waiting === 1 ? 'idea' : 'ideas'} again</button>` : ''}<button class="btn line wide ideas" data-ideas="${shelfKind}">Give me new ideas</button>` : '';
+  const more = canWrite ? `${waiting ? `<button class="btn wide ideas" data-back-ideas>See the ${waiting} new ${waiting === 1 ? 'recipe' : 'recipes'} again</button>` : ''}<button class="btn line wide ideas" data-ideas="${shelfKind}">Give me new ideas</button><button class="btn line wide" data-own>Add a recipe of my own</button>` : '';
   if (shelfKind !== 'dinner') {
     const list = RECIPES.filter(r => r.kind === shelfKind && !r.idea).sort(loved);
     return `${shelves}
@@ -384,6 +565,9 @@ function recipesView() {
   let list = dinners(), empty = 'Nothing is fully stocked yet. Photograph the fridge and pantry, or tick things off in Kitchen.';
   if (filter === 'rotation') { list = list.filter(r => state.rot[r.id]).sort(loved); empty = 'Nothing is on rotation yet. Open a meal you loved and tap Put on rotation.'; }
   if (filter === 'ranked') { list = list.filter(r => state.rate[r.id]).sort((a, b) => state.rate[b.id] - state.rate[a.id] || loved(a, b)); empty = 'No meals are rated yet. Open a meal and give it stars; the best ones rise to the top here.'; }
+  if (filter === 'kid') { list = list.filter(r => state.kid[r.id] === 'yes').sort(loved); empty = `Nothing is marked yet. Open a meal and say whether ${KID} ate it.`; }
+  if (filter === 'pack') list = list.filter(r => r.pack);
+  if (filter === 'quick') list = list.filter(r => r.prep).sort((a, b) => a.prep - b.prep || a.ings.length - b.ings.length);
   if (filter === 'allday') list = list.filter(r => r.hours >= 8);
   if (filter === 'ready') list = list.filter(r => !missing(r).length);
   if (filter === 'protein') list.sort((a, b) => b.protein - a.protein);
@@ -393,6 +577,7 @@ function recipesView() {
     ${FILTERS.map(([id, label]) => `<button class="chip" data-filter="${id}" aria-pressed="${filter === id}">${label}</button>`).join('')}
   </div>
   ${filter === 'rotation' && list.length ? `<button class="btn wide spin" data-spin="next">Surprise me from the rotation</button>` : ''}
+  ${filter === 'pack' ? `<p class="note">These can be bagged up raw and frozen, then tipped into the pot on a busy day. Open one for how.</p>` : ''}
   ${list.length ? `<ul class="cards">${list.map((r, n) => recipeRow(r, `data-open="${r.id}"`, filter === 'ranked' ? n + 1 : 0)).join('')}</ul>` : `<p class="note">${empty}</p>`}
   ${more}`;
 }
@@ -423,29 +608,37 @@ function kitchenView() {
 
 function listView() {
   const shop = shopping();
+  const spanSeg = `<div class="seg" role="group" aria-label="How far ahead to shop"><button data-span="7" aria-pressed="${span === 7}">This week</button><button data-span="14" aria-pressed="${span === 14}">Two weeks</button></div>`;
   const mine = `${state.todo.length ? `<h2 class="shelf">Also on the list</h2><ul class="also">${state.todo.map((t, n) => `<li><button class="tick" data-todo="${n}" aria-label="Bought ${esc(t)}"></button><span>${esc(t)}</span></li>`).join('')}</ul>` : ''}
   <form class="add" id="addTodo"><label for="todo">Add anything else to the list</label>
     <div><input id="todo" autocomplete="off" enterkeyhint="done" maxlength="40" placeholder="Milk, diapers..."><button class="btn small">Add</button></div></form>`;
-  if (!shop.items.length) return `<p class="note">${Object.keys(state.plan).length || state.prep.length ? 'Nothing to buy for this week\'s meals. Everything is in the kitchen.' : 'Plan a few dinners on the Tonight screen and what you need shows up here, priced for Walmart and Ingles.'}</p>${mine}`;
+  if (!shop.items.length) return `${spanSeg}<p class="note">${Object.keys(state.plan).length || state.prep.length ? 'Nothing to buy for these meals. Everything is in the kitchen.' : 'Plan a few dinners on the Tonight screen and what you need shows up here, priced for Walmart and Ingles.'}</p>${mine}`;
   const cheaper = shop.w <= shop.i ? 'Walmart' : 'Ingles';
-  return `
+  const real = shop.items.filter(it => fromReceipt(it.id, 'i')).length, n = shop.items.length;
+  const old = (Date.now() - new Date(PRICED_ON + 'T12:00:00')) / 864e5 > 21;
+  const cart = shop.items.filter(it => WM[it.id]).map(it => { const w = WM[it.id]; return `${Array.isArray(w) ? w[0] : w}%7C${it.packs * (Array.isArray(w) && w[1] === 'each' ? w[2] : 1)}`; });
+  return `${spanSeg}
   <div class="verdict">
     <p class="kicker">Cheaper this trip</p>
     <p class="pick">${cheaper}</p>
     <p>About ${money(Math.abs(shop.w - shop.i))} less for this list.</p>
+    ${real * 2 < n ? `<p class="stock">Most of the Ingles prices here are still estimates.</p>` : ''}
     <dl><div><dt>Walmart</dt><dd>${money(shop.w)}</dd></div><div><dt>Ingles</dt><dd>${money(shop.i)}</dd></div></dl>
   </div>
   <button class="btn line wide" data-share-list>Send this list</button>
-  <p class="note">Walmart prices were checked ${PRICED} at the Milledgeville store. Ingles prices are estimates until a receipt replaces them, and its weekly meat specials can beat these.</p>
+  ${cart.length ? `<a class="btn line wide" href="https://affil.walmart.com/cart/addToCart?items=${cart.join(',')}" target="_blank" rel="noopener">Put these in my Walmart cart</a>
+  <p class="note">Opens Walmart with ${cart.length === n ? 'everything' : `${cart.length} of the ${n}`} in the cart, ready for pickup or delivery. Sign in there to keep it. Meat goes in as one package, so check the sizes.</p>` : ''}
+  <p class="note">Walmart prices were checked ${PRICED} at the Eatonton store${old ? ', so some will have moved' : ''}. Ingles: ${real ? `${real} of the ${n} prices here are from your receipts and the rest are estimates` : 'the prices here are all estimates'}${gap ? ', set from what your Ingles receipts have shown so far' : ''}. Each photo of an Ingles receipt makes more of them real. A dot marks a price from your own receipt.</p>
   <table class="buy">
     <thead><tr><th scope="col">Tick off as you buy</th><th scope="col">Walmart</th><th scope="col">Ingles</th></tr></thead>
-    <tbody>${shop.items.map(it => {
+    <tbody>${shop.items.map((it, k) => {
       const c = cat(it.id), w = price(it.id, 'w') * it.packs, i = price(it.id, 'i') * it.packs;
-      return `<tr>
+      const head = k === 0 || cat(shop.items[k - 1].id).section !== c.section ? `<tr class="sec"><th colspan="3" scope="colgroup">${c.section}</th></tr>` : '';
+      return `${head}<tr>
         <th scope="row"><button class="tick" data-bought="${it.id}" aria-label="Bought ${esc(c.name)}"></button>
           <span><span class="name">${esc(c.name)}${it.packs > 1 ? ` <b>x${Number(it.packs)}</b>` : ''}</span><span class="meta">${esc(c.buy)}</span></span></th>
-        <td class="${w <= i ? 'win' : ''}">${money(w)}${fromReceipt(it.id, 'w') ? '<i title="From your receipt">r</i>' : ''}</td>
-        <td class="${i < w ? 'win' : ''}">${money(i)}${fromReceipt(it.id, 'i') ? '<i title="From your receipt">r</i>' : ''}</td></tr>`; }).join('')}
+        <td class="${w <= i ? 'win' : ''}">${money(w)}${fromReceipt(it.id, 'w') ? '<i aria-label="from your receipt"></i>' : ''}</td>
+        <td class="${i < w ? 'win' : ''}">${money(i)}${fromReceipt(it.id, 'i') ? '<i aria-label="from your receipt"></i>' : ''}</td></tr>`; }).join('')}
     </tbody>
   </table>${mine}`;
 }
@@ -480,8 +673,17 @@ function openSheet(html) {
   $('#sheet').querySelector('button, input')?.focus({ preventScroll: true });
 }
 let busy = false; // a request is in flight; its sheet cannot be dismissed
+// Keeps the screen from dimming while a recipe is open, so it can be read with messy hands.
+let lock = null;
+async function stayAwake(on) {
+  try {
+    if (on && !lock && navigator.wakeLock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); }
+    else if (!on && lock) { const l = lock; lock = null; await l.release(); }
+  } catch { lock = null; }
+}
 function closeSheet() {
   if (busy) return;
+  stayAwake(false);
   $('#view').inert = false; document.querySelector('.tabs').inert = false; document.querySelector('.top').inert = false;
   $('#sheet').hidden = true; $('#scrim').hidden = true;
   document.body.classList.remove('locked');
@@ -496,6 +698,7 @@ function ingList(r) {
     <span>${esc(CATALOG[iid][0])}<small>${esc(amt)}</small></span>
     <button class="flip" data-ing="${iid}" data-rid="${r.id}" aria-label="${esc(CATALOG[iid][0])}: ${state.have[iid] ? 'have it. Tap if you do not' : 'need it. Tap if you have it'}">${state.have[iid] ? 'have' : 'need'}</button></li>`).join('')}</ul>
   <p class="safe">Tap have or need to correct it.</p>
+  ${r.ings.some(([iid, amt]) => (iid === 'onion' && /dice|slice/.test(amt)) || (iid === 'garlic' && /mince/.test(amt))) ? '<p class="safe">Faster: ready-diced onion from the produce case and jarred minced garlic both work here. Half a teaspoon of jarred garlic is one clove.</p>' : ''}
   <h3>How</h3>
   <ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`;
 }
@@ -508,10 +711,42 @@ function lovedRow(r) {
     <div class="rate" role="group" aria-label="Rate this meal out of five">${[1, 2, 3, 4, 5].map(k =>
       `<button data-rate="${k}" data-rid="${r.id}" aria-pressed="${k <= n}" aria-label="${k} ${k === 1 ? 'star' : 'stars'}">${k <= n ? '★' : '☆'}</button>`).join('')}</div>
   </div>
-  <p class="safe">Rotation is your list of keepers. Surprise me picks from it.</p>`;
+  <p class="safe">Rotation is your list of keepers. Surprise me picks from it.</p>
+  <div class="kidrow" role="group" aria-label="Did ${KID} eat it?"><span>Did ${KID} eat it?</span>
+    <button class="flip" data-kid="yes" data-rid="${r.id}" aria-pressed="${state.kid[r.id] === 'yes'}">Yes</button>
+    <button class="flip" data-kid="no" data-rid="${r.id}" aria-pressed="${state.kid[r.id] === 'no'}">Not really</button></div>`;
 }
-const ideaActs = r => `<div class="acts two"><button class="btn" data-keep-idea="${r.id}">Keep this recipe</button><button class="btn line" data-back-ideas>Back to the ideas</button></div>`;
-const unproven = r => r.mine || r.idea ? `<p class="safe">This one was written on request and has not been test-cooked. Check the times the first time you make it. Chicken and turkey are done at 165°F, ground meat at 160°F, pork and beef roasts at 145°F.</p>` : '';
+const ideaActs = r => r.own
+  ? `<div class="acts two"><button class="btn" data-keep-idea="${r.id}">Keep this recipe</button><button class="btn line" data-own>Not right, start over</button></div>`
+  : `<div class="acts two"><button class="btn" data-keep-idea="${r.id}">Keep this recipe</button><button class="btn line" data-back-ideas>Back to the ideas</button></div>`;
+const heads = r => (r.note ? `<p class="little warn"><b>Heads up.</b> ${esc(r.note)}</p>` : '');
+const unproven = r => `${r.own
+  ? `<p class="safe">This is your own recipe, put into Simmer's format. Check it against the original the first time you make it.</p>`
+  : r.mine || r.idea ? `<p class="safe">This one was written on request and has not been test-cooked. Check the times the first time you make it. Chicken and turkey are done at 165°F, ground meat at 160°F, pork and beef roasts at 145°F.</p>` : ''}`;
+// Notes the family leaves on a recipe, and a way to send the recipe to someone.
+const notesBlock = r => r.idea ? '' : `<form class="add notes" id="noteForm" data-rid="${r.id}"><label for="noteText">Notes for next time</label>
+  <textarea id="noteText" rows="2" maxlength="300" placeholder="More garlic. Halve the salt.">${esc(state.notes[r.id] || '')}</textarea><button class="btn small">Save note</button></form>
+  <button class="link" data-share-recipe="${r.id}">Send this recipe to someone</button>`;
+const listOf = a => (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0] || '');
+// How to make a dinner ahead as a freezer pack, for the dinners that freeze well raw.
+function packBlock(r) {
+  if (!r.pack || r.idea) return '';
+  const out = listOf(r.pack.map(id => soft(CATALOG[id][0].split(',')[0]))), have = state.packs[r.id], on = state.prep.includes(r.id);
+  return `<h3>Make it a freezer pack</h3>
+  <p class="blurb">Put everything raw into a gallon freezer bag${out ? `, except the ${esc(out)}` : ''}. Press the air out, write the name and date on it, and freeze it flat. It keeps 3 months. Thaw it in the fridge for ${thawDays(r) > 1 ? 'two nights' : 'a full night'}, on a plate, and cook it only once it has thawed all the way${out ? `. Add the ${esc(out)} on the day` : ''}.</p>
+  ${have ? `<p class="little"><b>One is in the freezer,</b> frozen ${shortDate(have)}. The shopping list only asks for what stays out of the bag.</p>` : ''}
+  <div class="acts two"><button class="btn line" data-prep="${r.id}">${on ? 'Take off weekend prep' : 'Add to weekend prep'}</button><button class="btn line" data-froze="${r.id}">${have ? 'I froze another' : 'I froze a pack'}</button></div>`;
+}
+function frozeSheet(id) {
+  const r = recipe(id);
+  const used = r.ings.filter(([iid]) => !r.pack.includes(iid) && !cat(iid).staple && state.have[iid]);
+  openSheet(`${closer}
+  <h2 id="sheetTitle">One for the freezer</h2>
+  <p class="blurb">${used.length ? 'Anything ticked here went into the bag and comes off the kitchen list.' : 'It goes on the Made and waiting list.'}</p>
+  <ul class="found">${used.map(([iid]) => `<li><label><input type="checkbox" data-used="${iid}" ${['Meat', 'Produce', 'Cans and jars'].includes(cat(iid).section) ? 'checked' : ''}>
+    <span>${esc(CATALOG[iid][0])}</span></label></li>`).join('')}</ul>
+  <button class="btn wide" data-froze-done="${id}">Done</button>`);
+}
 const dropper = r => r.mine ? `<button class="link drop" data-drop="${r.id}">Remove this recipe</button>` : '';
 
 function prepSheet(r) {
@@ -519,9 +754,9 @@ function prepSheet(r) {
   openSheet(`${closer}
   <div class="art">${pic(r)}</div>
   <h2 id="sheetTitle">${esc(r.name)}</h2>
-  <p class="facts">${esc(r.method)}. Makes ${esc(r.makes)}.${madeText(r.id) ? ' ' + madeText(r.id) + '.' : ''}</p>
+  <p class="facts">${esc(r.method)}. Makes ${esc(r.makes)}.${r.prep ? ` About ${r.prep} minutes hands-on.` : ''}${madeText(r.id) ? ' ' + madeText(r.id) + '.' : ''}</p>
   ${r.idea || !API ? '' : `<div class="shots"><button class="link" data-shot="${r.id}">${state.photos[r.id] ? 'Retake my photo' : 'Use my own photo'}</button>${state.photos[r.id] ? `<button class="link" data-unshot="${r.id}">Go back to the drawing</button>` : ''}</div>`}
-  <p class="blurb">${esc(r.blurb)}</p>
+  <p class="blurb">${esc(r.blurb)}</p>${heads(r)}
   ${r.idea ? ideaActs(r) : `<div class="acts two">
     <button class="btn ${on ? 'line' : ''}" data-prep="${r.id}">${on ? 'Take off weekend prep' : 'Add to weekend prep'}</button>
     <button class="btn line" data-made="${r.id}">${made ? 'Made another batch' : 'I made a batch'}</button>
@@ -529,7 +764,8 @@ function prepSheet(r) {
   ${ingList(r)}
   <p class="little"><b>Keeping it.</b> ${esc(r.keeps)} Cool completely before it goes in a bag or box.</p>
   <p class="little"><b>For ${KID}.</b> ${esc(r.little)}</p>
-  ${unproven(r)}${dropper(r)}`);
+  ${unproven(r)}${notesBlock(r)}${dropper(r)}`);
+  stayAwake(true);
 }
 
 function recipeSheet(id) {
@@ -539,20 +775,22 @@ function recipeSheet(id) {
   openSheet(`${closer}
   <div class="art">${pic(r)}</div>
   <h2 id="sheetTitle">${esc(r.name)}</h2>
-  <p class="facts">${r.hours} hours on low. Serves ${r.serves}. About ${r.protein} g protein a serving.${madeText(r.id) ? ' ' + madeText(r.id) + '.' : ''}</p>
+  <p class="facts">${r.prep ? `${r.prep} minutes of prep. ` : ''}${r.hours} hours on low. Serves ${r.serves}. About ${r.protein} g protein a serving.${madeText(r.id) ? ' ' + madeText(r.id) + '.' : ''}</p>
   ${r.idea || !API ? '' : `<div class="shots"><button class="link" data-shot="${r.id}">${state.photos[r.id] ? 'Retake my photo' : 'Use my own photo'}</button>${state.photos[r.id] ? `<button class="link" data-unshot="${r.id}">Go back to the drawing</button>` : ''}</div>`}
-  <p class="blurb">${esc(r.blurb)}</p>
+  <p class="blurb">${esc(r.blurb)}</p>${heads(r)}
   ${r.idea ? ideaActs(r) : `${lovedRow(r)}
   <h3>Cook it on</h3>
-  <div class="chips wrap">${week().map(d => `<button class="chip" data-plan="${d.key}" data-id="${r.id}" aria-pressed="${state.plan[d.key] === r.id}">${d.i < 2 ? dayName(d) : d.date.toLocaleDateString('en-US', { weekday: 'short' })}${state.plan[d.key] && state.plan[d.key] !== r.id ? '<small> taken</small>' : ''}</button>`).join('')}</div>`}
+  <div class="chips wrap">${days(14).map(d => `${d.i === 7 ? '</div><p class="safe">Or next week</p><div class="chips wrap">' : ''}<button class="chip" data-plan="${d.key}" data-id="${r.id}" aria-pressed="${state.plan[d.key] === r.id}">${d.i < 2 ? dayName(d) : dayShort(d)}${state.plan[d.key] && state.plan[d.key] !== r.id ? '<small> taken</small>' : ''}</button>`).join('')}</div>`}
   ${ingList(r)}
   <p class="little"><b>For ${KID}.</b> ${esc(r.little)} Salt the grown-up plates at the table.</p>
   <p class="safe">Thaw meat before it goes in. ${r.hours >= 8 ? 'Most slow cookers switch to warm on their own, so a long work day is fine.' : 'If you will be out longer than this, set it to switch to warm.'}</p>
-  ${unproven(r)}${dropper(r)}`);
+  ${packBlock(r)}
+  ${unproven(r)}${notesBlock(r)}${dropper(r)}`);
+  stayAwake(true);
 }
 
 function pickSheet(key) {
-  const d = week().find(x => x.key === key);
+  const d = days().find(x => x.key === key);
   if (!d) return closeSheet(); // the day rolled over while this was open
   const cur = state.plan[key];
   const byStock = (a, b) => missing(a).length - missing(b).length || b.protein - a.protein;
@@ -574,9 +812,9 @@ function pickSheet(key) {
 
 // Choosing Leftovers asks which meal they are from, listing this week's dinners and the most recent ones first.
 function leftSheet(key) {
-  const d = week().find(x => x.key === key);
+  const d = days().find(x => x.key === key);
   if (!d) return closeSheet(); // the day rolled over while this was open
-  const recent = [...new Set([...week().filter(x => x.i < d.i).map(x => state.plan[x.key]), ...[...state.log].reverse().map(l => l.id)])]
+  const recent = [...new Set([...days().filter(x => x.i < d.i).reverse().map(x => state.plan[x.key]), ...[...state.log].reverse().map(l => l.id)])]
     .map(recipe).filter(r => r && !r.kind && !r.idea);
   const rest = dinners().filter(r => !recent.includes(r)).sort((a, b) => a.name.localeCompare(b.name));
   const row = r => `<li><button class="card" data-left="${key}" data-id="${r.id}" ${state.left[key] === r.id ? 'aria-current="true"' : ''}><span class="thumb">${pic(r)}</span><span class="txt"><span class="name">${esc(r.name)}</span>${madeText(r.id) ? `<span class="meta">${madeText(r.id)}</span>` : ''}</span></button></li>`;
@@ -613,7 +851,8 @@ function fromIdea(x, kind) {
     if (id.startsWith('x_')) items[id] = CATALOG[id] || [g.name, g.section, g.walmart, g.ingles, g.buy];
     ings.push(g.packs > 1 ? [id, g.amount, g.packs] : [id, g.amount]);
   }
-  const base = { id: 'm_' + slug(x.name) + '_' + Math.random().toString(36).slice(2, 6), name: x.name, blurb: x.blurb, ings, steps: x.steps, little: x.little, look: x.look };
+  const base = { id: 'm_' + slug(x.name) + '_' + Math.random().toString(36).slice(2, 6), name: x.name, blurb: x.blurb, ings, steps: x.steps, little: x.little, look: x.look,
+    ...(Number.isFinite(x.prep) ? { prep: x.prep } : {}), ...(x.own ? { own: true } : {}), ...(x.note ? { note: String(x.note).slice(0, 200) } : {}) };
   const recipeOut = kind === 'dinner' ? { ...base, hours: x.hours, serves: x.serves, protein: x.protein } : { ...base, kind, method: x.method, makes: x.makes, keeps: x.keeps };
   return { recipe: recipeOut, items };
 }
@@ -652,16 +891,49 @@ async function askIdeas(kind) {
 function ideasSheet() {
   const list = RECIPES.filter(r => r.idea);
   if (!list.length) return closeSheet();
+  if (list.every(r => r.own)) return recipeSheet(list[0].id);
   openSheet(`${closer}
   <h2 id="sheetTitle">${list.length === 1 ? 'One new idea' : list.length + ' new ideas'}</h2>
   <p class="blurb">Written just now and not test-cooked. Open one to read it, and keep the ones you like.</p>
   <ul class="cards tight">${list.map(r => recipeRow(r, `data-open="${r.id}"`)).join('')}</ul>
   <button class="btn line wide" data-ideas="${ideasKind}">Try three more</button>`);
 }
+// The family's own recipe, from a photo of the card or page, or pasted in.
+let ownMode = false;
+function ownSheet(msg = '') {
+  openSheet(`${closer}<h2 id="sheetTitle">Add a recipe of your own</h2>
+    <p class="blurb">A slow cooker dinner, or a breakfast or snack for ${KID}. Simmer puts it in the same shape as the others without changing how it is cooked.</p>
+    ${msg ? `<p class="little warn">${esc(msg)}</p>` : ''}
+    <button class="btn wide" data-own-photo>Photograph the card or page</button>
+    <form class="add notes" id="ownForm"><label for="ownText">Or paste or type it here</label>
+      <textarea id="ownText" rows="6" maxlength="6000"></textarea><button class="btn small">Read it</button></form>`);
+}
+async function readOwn(payload) {
+  busy = true;
+  openSheet(`<h2 id="sheetTitle">Reading your recipe</h2><p class="blurb">About 15 seconds.</p><div class="working" aria-hidden="true"></div>`);
+  try {
+    if (!state.base) await push();
+    const res = await fetch(API + '/recipe', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ house: state.house, ...payload, catalog: Object.keys(CATALOG).map(id => ({ id, name: CATALOG[id][0] })),
+        looks: RECIPES.filter(r => !r.idea && LOOKS.includes(r.id)).map(r => ({ id: r.id, name: r.name })) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !Array.isArray(data.recipes) || !data.recipes.length) throw new Error(data.error || 'That could not be read. Try again.');
+    ideas = data.recipes.map(x => fromIdea({ ...x, own: true }, ['breakfast', 'snack'].includes(x.kind) ? x.kind : 'dinner')).filter(i => i.recipe.ings.length >= 2);
+    if (!ideas.length) throw new Error('That did not read as a recipe. Check the photo shows the ingredients and the steps.');
+    hydrate(); busy = false;
+    recipeSheet(ideas[0].recipe.id);
+  } catch (e) {
+    busy = false;
+    ownSheet(e.message && !/fetch/i.test(e.message) ? e.message : 'Check the connection and try again.');
+  }
+}
 function keepIdea(id) {
   const n = ideas.findIndex(i => i.recipe.id === id);
   if (n < 0) return;
   const [it] = ideas.splice(n, 1);
+  note(`${it.recipe.own ? 'added a family recipe' : 'kept a new recipe'}: ${it.recipe.name}`);
   state.mine.push(it.recipe);
   Object.assign(state.items, it.items);
   hydrate(); save(); render();
@@ -672,16 +944,16 @@ function dropMine(id) {
   state.mine = state.mine.filter(r => r.id !== id);
   const used = new Set(state.mine.flatMap(r => r.ings.map(g => g[0])));
   for (const k of Object.keys(state.items)) if (!used.has(k)) { delete state.items[k]; delete state.have[k]; }
-  delete state.rot[id]; delete state.rate[id];
+  delete state.rot[id]; delete state.rate[id]; delete state.kid[id]; delete state.notes[id];
   tidy(); save(); closeSheet(); render();
   toast('Recipe removed');
 }
 
 // Plans a random rotation dinner for a night, skipping ones already on this week when it can.
 function spin(key) {
-  const days = week();
-  if (key === 'next') { const open = days.find(d => !state.plan[d.key] && !(d.i === 0 && (cookingNow() || (dinnerAt() - Date.now()) / 36e5 < 4))); if (!open) return toast('Every night already has a plan'); key = open.key; }
-  if (!days.some(d => d.key === key)) { closeSheet(); return; }
+  const all = days();
+  if (key === 'next') { const open = all.slice(0, 7).find(d => !state.plan[d.key] && !(d.i === 0 && (cookingNow() || (dinnerAt() - Date.now()) / 36e5 < 4))); if (!open) return toast('Every night already has a plan'); key = open.key; }
+  if (!all.some(d => d.key === key)) { closeSheet(); return; }
   if (key === today() && cookingNow()) return toast('Tonight\'s dinner is already in the pot');
   const planned = new Set(Object.values(state.plan));
   let pool = onRotation().filter(r => r.id !== state.plan[key]);
@@ -691,8 +963,9 @@ function spin(key) {
   const r = pool[Math.floor(Math.random() * pool.length)];
   state.plan[key] = r.id;
   if (key === today() && state.cooking && state.cooking.id !== r.id) state.cooking = null;
+  const d = all.find(x => x.key === key);
+  note(`planned ${r.name} for ${d.i === 0 ? 'tonight' : d.i === 1 ? 'tomorrow' : dayName(d)}`);
   save(); closeSheet(); render();
-  const d = days.find(x => x.key === key);
   toast(`${r.name} for ${d.i === 0 ? 'tonight' : d.i === 1 ? 'tomorrow' : dayName(d)}`);
 }
 
@@ -736,18 +1009,20 @@ async function resub(oldCode = '') {
     await post('sub', state.house);
   } catch { /* the reminder screen will show its real state */ }
 }
-async function morningSheet(note = '') {
+async function morningSheet(msg = '') {
   const sub = await pushState().catch(() => null);
   notePush(!!sub);
-  openSheet(`${closer}<h2 id="sheetTitle">Morning reminder</h2>
-    <p class="blurb">A notification each morning with what is for dinner and when the pot needs to go on. Nothing is sent on days with no plan.</p>
-    ${note ? `<p class="little">${esc(note)}</p>` : ''}
-    <label class="time">Send it at <input type="time" id="briefTime" value="${esc(state.brief || '07:00')}"></label>
+  openSheet(`${closer}<h2 id="sheetTitle">Alerts</h2>
+    <p class="blurb">Notifications from Simmer on this phone. Each phone turns them on for itself. What gets sent is the same for the whole kitchen.</p>
+    ${msg ? `<p class="little">${esc(msg)}</p>` : ''}
     ${!canPush() ? `<p class="little">This only works when Simmer is opened from its home screen icon (iPhone needs iOS 16.4 or newer). Add it to the home screen, open it from there, and come back to this screen.</p>`
-      : sub ? `<p class="little"><b>On for this phone.</b> Each phone turns it on for itself.</p>
+      : sub ? `<p class="little"><b>On for this phone.</b></p>
         <button class="btn wide" data-push-test>Send a test now</button><button class="btn line wide" data-push-off>Turn off on this phone</button>`
       : `<button class="btn wide" data-push-on>Turn on for this phone</button>`}
-    `);
+    <h3>What to send</h3>
+    <ul class="switches">${ALERTS.map(([k, name, what]) => `<li><span>${name}<small>${what}</small></span>
+      <button class="flip" data-alert="${k}" aria-pressed="${alertOn(k)}" aria-label="${name}: ${alertOn(k) ? 'on' : 'off'}">${alertOn(k) ? 'on' : 'off'}</button></li>`).join('')}</ul>
+    <label class="time">Send the morning plan at <input type="time" id="briefTime" value="${esc(state.brief || '07:00')}"></label>`);
 }
 async function pushOn() {
   try {
@@ -761,6 +1036,7 @@ async function pushOn() {
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || '');
     notePush(true); save(); render();
     morningSheet('Turned on. Send a test to see it arrive.');
+    warm();
   } catch (e) {
     try { await (await pushState())?.unsubscribe(); } catch { /* nothing to undo */ }
     morningSheet(e.message || 'It could not be turned on. Try again.');
@@ -780,8 +1056,11 @@ async function pushOff() {
 async function pushTest() {
   save(); clearTimeout(pushTimer); await push();
   const res = await fetch(`${API}/push/test/${state.house}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(r => r.json()).catch(() => ({}));
+  const detail = Array.isArray(res.detail) ? res.detail : [];
   const ok = (res.sent || []).some(c => c >= 200 && c < 300);
-  morningSheet(ok ? 'Test sent. It should arrive within a few seconds.' : (res.error || 'The test could not be sent. Turn it off and on again, then retry.'));
+  morningSheet(ok ? 'Test sent. It should arrive within a few seconds. If it does not, check that notifications are allowed for Simmer in the phone\'s Settings and that a Focus is not holding it back.'
+    : detail.length ? `The phone's notification service turned it down (${detail.map(x => `${x.status}${x.reason ? ' ' + x.reason : ''}`).join('; ').slice(0, 160)}). Turn alerts off and on again on this phone, then retry.`
+    : (res.error || 'The test could not be sent. Turn it off and on again, then retry.'));
 }
 
 function shrink(file, max = 1400) {
@@ -850,13 +1129,14 @@ function keepFound() {
     if (CATALOG[it.id]) {
       state.have[it.id] = true;
       const p = Number(it.price);
-      if (pending.store && p > 0 && p < 200) state.prices[it.id] = { ...state.prices[it.id], [pending.store]: p };
+      if (pending.store && p > 0 && p < 200) state.prices[it.id] = { ...state.prices[it.id], [pending.store]: p, [pending.store + 't']: today() };
     } else {
       const name = String(it.name).trim().slice(0, 40);
       if (name && !state.extra.some(x => x.toLowerCase() === name.toLowerCase())) state.extra.push(name);
     }
     n++;
   });
+  if (n) note(`added ${n} ${n === 1 ? 'thing' : 'things'} from a ${pending.store ? 'receipt' : 'photo'}`);
   save(); closeSheet(); render();
   toast(`Added ${n} to the kitchen`);
 }
@@ -901,8 +1181,50 @@ document.addEventListener('click', e => {
   if (d.tab) { tab = d.tab; render(); window.scrollTo(0, 0); return; }
   if (d.filter) { filter = d.filter; render(); return; }
   if (d.shelf) { shelfKind = d.shelf; render(); return; }
+  if (d.who) { setWho(d.who); return render(); }
+  if ('whoAsk' in d) {
+    return openSheet(`${closer}<h2 id="sheetTitle">Whose phone is this?</h2>
+      <p class="blurb">Simmer uses the name to say who changed what. It stays on this phone.</p>
+      <form class="add" id="whoForm"><label for="whoName">Name</label>
+        <div><input id="whoName" autocomplete="given-name" maxlength="20" value="${esc(who)}"><button class="btn small">Save</button></div></form>`);
+  }
+  if ('nextWeek' in d) { showNext = !showNext; return render(); }
+  if ('gotoPacks' in d) { tab = 'recipes'; shelfKind = 'dinner'; filter = 'pack'; render(); window.scrollTo(0, 0); return; }
+  if (d.span) { span = d.span === '14' ? 14 : 7; try { localStorage.setItem('simmer.span', String(span)); } catch { /* no storage */ } return render(); }
+  if ('acts' in d) return openSheet(`${closer}<h2 id="sheetTitle">Lately</h2><ul class="lately">${[...state.acts].reverse().map(actRow).join('')}</ul>`);
+  if (d.alert) {
+    state.alerts[d.alert] = !alertOn(d.alert);
+    save();
+    const on = alertOn(d.alert);
+    b.setAttribute('aria-pressed', on); b.textContent = on ? 'on' : 'off';
+    return;
+  }
+  if (d.kid) {
+    if (state.kid[d.rid] === d.kid) delete state.kid[d.rid]; else state.kid[d.rid] = d.kid;
+    if (state.kid[d.rid]) note(`said ${KID} ${state.kid[d.rid] === 'yes' ? 'ate' : 'did not go for'} the ${soft(recipe(d.rid).name)}`, 'kid:' + d.rid);
+    save();
+    b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', state.kid[d.rid] === x.dataset.kid));
+    return render();
+  }
+  if (d.froze) return frozeSheet(d.froze);
+  if (d.frozeDone) {
+    document.querySelectorAll('[data-used]:checked').forEach(box => { delete state.have[box.dataset.used]; });
+    state.packs[d.frozeDone] = today();
+    state.prep = state.prep.filter(x => x !== d.frozeDone);
+    note(`froze a pack of ${soft(recipe(d.frozeDone).name)}`);
+    save(); closeSheet(); render();
+    return toast('On the Made and waiting list');
+  }
+  if (d.unpack) { const undo = snap(); delete state.packs[d.unpack]; save(); render(); return toast('Freezer pack used', undo); }
+  if (d.shareRecipe) {
+    const r = recipe(d.shareRecipe);
+    return send({ text: `${r.name}\n${r.kind ? `${r.method}. Makes ${r.makes}.` : `Slow cooker, ${r.hours} hours on low. Serves ${r.serves}.`}\n\nWhat goes in:\n${r.ings.map(([iid, amt]) => `- ${CATALOG[iid][0]}: ${amt}`).join('\n')}\n\nHow:\n${r.steps.map((t, n) => `${n + 1}. ${t}`).join('\n')}${state.notes[r.id] ? `\n\nOur notes: ${state.notes[r.id]}` : ''}` }, 'Recipe copied');
+  }
+  if ('own' in d) return ownSheet();
+  if ('ownPhoto' in d) { ownMode = true; shotFor = ''; $('#photo').setAttribute('multiple', ''); $('#photo').value = ''; $('#photo').click(); return; }
   if (d.rot) {
     if (state.rot[d.rot]) delete state.rot[d.rot]; else state.rot[d.rot] = true;
+    note(`${state.rot[d.rot] ? 'put' : 'took'} ${soft(recipe(d.rot).name)} ${state.rot[d.rot] ? 'on' : 'off'} rotation`, 'rot:' + d.rot);
     save();
     const on = !!state.rot[d.rot];
     b.textContent = on ? 'On rotation' : 'Put on rotation';
@@ -913,6 +1235,7 @@ document.addEventListener('click', e => {
   if (d.rate) {
     const n = +d.rate;
     if (state.rate[d.rid] === n) delete state.rate[d.rid]; else state.rate[d.rid] = n;
+    if (state.rate[d.rid]) note(`gave the ${soft(recipe(d.rid).name)} ${n} ${n === 1 ? 'star' : 'stars'}`, 'rate:' + d.rid);
     save();
     b.parentElement.querySelectorAll('button').forEach(x => { const on = +x.dataset.rate <= (state.rate[d.rid] || 0); x.setAttribute('aria-pressed', on); x.textContent = on ? '★' : '☆'; });
     return render();
@@ -930,12 +1253,14 @@ document.addEventListener('click', e => {
   if (d.prep) {
     const on = state.prep.includes(d.prep);
     state.prep = on ? state.prep.filter(x => x !== d.prep) : [...state.prep, d.prep];
+    if (!on) note(`added ${soft(recipe(d.prep).name)} to weekend prep`);
     save(); closeSheet(); render();
     return toast(on ? 'Taken off weekend prep' : 'Added to weekend prep');
   }
   if (d.made) {
     state.stash[d.made] = today();
     state.prep = state.prep.filter(x => x !== d.made);
+    note(`made a batch of ${soft(recipe(d.made).name)}`);
     save(); closeSheet(); render();
     return toast('Marked as made today');
   }
@@ -948,12 +1273,14 @@ document.addEventListener('click', e => {
     const undoPlan = snap();
     if (!d.id || was === d.id) delete state.plan[d.plan]; else state.plan[d.plan] = d.id;
     if (d.plan === today() && state.cooking && state.cooking.id !== state.plan[d.plan]) state.cooking = null;
+    const day = days().find(x => x.key === d.plan), on = day ? (day.i === 0 ? 'tonight' : day.i === 1 ? 'tomorrow' : dayName(day)) : 'a night';
+    note(state.plan[d.plan] ? `planned ${SPECIAL[d.id] ? SPECIAL[d.id].toLowerCase() : recipe(d.id).name} for ${on}` : `cleared dinner for ${on}`, 'plan:' + d.plan);
     if (d.id === '@leftovers' && state.plan[d.plan] === '@leftovers') { save(); return leftSheet(d.plan); }
     delete state.left[d.plan];
     save();
     if (b.classList.contains('chip')) {
       b.setAttribute('aria-pressed', state.plan[d.plan] === d.id); render();
-      const day = week().find(x => x.key === d.plan), old = SPECIAL[was] || recipe(was)?.name;
+      const old = SPECIAL[was] || recipe(was)?.name;
       if (day && state.plan[d.plan] && old && was !== d.id) toast(`${dayName(day)}: replaced ${soft(old)}`, undoPlan);
       return;
     }
@@ -966,12 +1293,19 @@ document.addEventListener('click', e => {
     save(); closeSheet(); render();
     return toast(d.id ? `Leftovers from the ${soft(recipe(d.id).name)}` : 'Leftovers planned');
   }
-  if (d.tonight) { state.plan[today()] = d.tonight; save(); render(); return toast('Planned for tonight'); }
-  if (d.start) { for (const [iid] of recipe(d.start).ings) state.have[iid] = true; state.plan[today()] = d.start; state.cooking = { id: d.start, start: Date.now() }; save(); render(); return toast('Timer started'); }
+  if (d.tonight) { state.plan[today()] = d.tonight; note(`planned ${recipe(d.tonight).name} for tonight`, 'plan:' + today()); save(); render(); return toast('Planned for tonight'); }
+  if (d.start) {
+    const r = recipe(d.start), bag = packOf(r); // with a freezer pack, only what stayed out of the bag came from the kitchen
+    for (const [iid] of r.ings) if (!bag || bag.includes(iid)) state.have[iid] = true;
+    delete state.packs[d.start];
+    state.plan[today()] = d.start; state.cooking = { id: d.start, start: Date.now() };
+    note(`put the ${soft(r.name)} in the pot`);
+    save(); render(); return toast('Timer started');
+  }
   if (d.served) return servedSheet(d.served);
   if (d.clear) {
     document.querySelectorAll('[data-used]:checked').forEach(box => { delete state.have[box.dataset.used]; });
-    state.last = { id: d.clear, day: today() };
+    note(`served the ${soft(recipe(d.clear).name)}`);
     const potDay = state.cooking && Number.isFinite(state.cooking.start) ? dayKey(new Date(state.cooking.start)) : today();
     state.last = { id: d.clear, day: potDay };
     state.log = [...state.log, { id: d.clear, day: potDay }].slice(-300);
@@ -980,6 +1314,7 @@ document.addEventListener('click', e => {
   }
   if (d.have) {
     if (state.have[d.have]) delete state.have[d.have]; else state.have[d.have] = true;
+    note('updated # in the kitchen', 'have');
     save(); b.setAttribute('aria-pressed', !!state.have[d.have]);
     const n = shopping().items.length; $('#listCount').hidden = !n; $('#listCount').textContent = n;
     return;
@@ -987,6 +1322,7 @@ document.addEventListener('click', e => {
   if (d.ing) {
     if (state.have[d.ing]) delete state.have[d.ing]; else state.have[d.ing] = true;
     delete state.low[d.ing];
+    note('updated # in the kitchen', 'have');
     save();
     const top = $('#sheet').scrollTop;
     recipeSheet(d.rid); $('#sheet').scrollTop = top;
@@ -994,17 +1330,18 @@ document.addEventListener('click', e => {
     return render();
   }
   if (d.extra) { const undo = snap(); const [gone] = state.extra.splice(+d.extra, 1); save(); render(); return toast(`${gone} removed`, undo); }
-  if (d.bought) { const undo = snap(); state.have[d.bought] = true; delete state.low[d.bought]; save(); render(); return toast('Bought', undo); }
-  if (d.todo) { const undo = snap(); state.todo.splice(+d.todo, 1); save(); render(); return toast('Bought', undo); }
+  if (d.bought) { const undo = snap(); state.have[d.bought] = true; delete state.low[d.bought]; note('ticked # off the shopping list', 'bought'); save(); render(); return toast('Bought', undo); }
+  if (d.todo) { const undo = snap(); state.todo.splice(+d.todo, 1); note('ticked # off the shopping list', 'bought'); save(); render(); return toast('Bought', undo); }
   if (d.staple) {
     const id = d.staple;
     if (state.low[id]) { delete state.low[id]; delete state.have[id]; }      // low -> out
     else if (state.have[id]) state.low[id] = true;                            // have -> running low
     else state.have[id] = true;                                               // out -> have
+    note('updated # in the kitchen', 'have');
     save(); return render();
   }
-  if ('autoplan' in d) return autoplan();
-  if (d.shot) { shotFor = d.shot; $('#photo').removeAttribute('multiple'); $('#photo').value = ''; $('#photo').click(); return; }
+  if ('autoplan' in d) return d.autoplan === 'next' ? autoplan(7, 14) : autoplan();
+  if (d.shot) { ownMode = false; shotFor = d.shot; $('#photo').removeAttribute('multiple'); $('#photo').value = ''; $('#photo').click(); return; }
   if (d.unshot) {
     delete state.photos[d.unshot]; save();
     fetch(`${API}/photo/${state.house}/${d.unshot}`, { method: 'DELETE' }).catch(() => {});
@@ -1023,7 +1360,7 @@ document.addEventListener('click', e => {
     return toast('New link made. Send it to the phones you want.');
   }
   if (d.snap) {
-    shotFor = ''; $('#photo').setAttribute('multiple', '');
+    ownMode = false; shotFor = ''; $('#photo').setAttribute('multiple', '');
     snapKind = d.snap;
     if (!API) return openSheet(`${closer}<h2 id="sheetTitle">Photos are not switched on yet</h2><p class="blurb">Until then, tick things off by hand in Kitchen.</p>`);
     $('#photo').value = ''; $('#photo').click();
@@ -1058,18 +1395,47 @@ document.addEventListener('click', e => {
   }
   if ('setDinner' in d) {
     const v = $('#dinnerTime').value;
-    if (/^\d\d:\d\d$/.test(v)) { state.dinner = v; save(); }
+    if (/^\d\d:\d\d$/.test(v)) { state.dinner = v; note(`set dinner time to ${clock(dinnerAt())}`, 'dinner'); save(); }
     closeSheet(); render(); return toast('Dinner time saved');
   }
 });
 
-$('#photo').addEventListener('change', e => {
+$('#photo').addEventListener('change', async e => {
   if (!e.target.files.length) return;
   if (shotFor) return saveShot(shotFor, e.target.files[0]);
+  if (ownMode) {
+    ownMode = false;
+    try { return readOwn({ images: await Promise.all([...e.target.files].slice(0, 3).map(f => shrink(f, 1600))) }); }
+    catch { return ownSheet('That photo could not be opened. Try again, or paste the recipe in.'); }
+  }
   readPhotos(e.target.files);
 });
+function setWho(name) {
+  who = String(name).replace(/[<>]/g, '').trim().slice(0, 20);
+  try { localStorage.setItem('simmer.who', who); } catch { /* still works for this visit */ }
+}
 
 document.addEventListener('submit', e => {
+  if (e.target.id === 'whoForm') {
+    e.preventDefault();
+    setWho($('#whoName').value);
+    closeSheet(); render();
+    return toast(who ? `This phone is ${who}'s` : 'Name cleared');
+  }
+  if (e.target.id === 'noteForm') {
+    e.preventDefault();
+    const id = e.target.dataset.rid, t = $('#noteText').value.trim().slice(0, 300);
+    if (t) state.notes[id] = t; else delete state.notes[id];
+    if (t) note(`left a note on the ${soft(recipe(id).name)}`, 'note:' + id);
+    save();
+    return toast(t ? 'Note saved' : 'Note cleared');
+  }
+  if (e.target.id === 'ownForm') {
+    e.preventDefault();
+    const text = $('#ownText').value.trim();
+    if (text.length < 20) return toast('Paste the whole recipe: what goes in and how it is made');
+    return readOwn({ text });
+  }
   if (e.target.id === 'joinForm') {
     e.preventDefault();
     const m = $('#joinCode').value.trim().toLowerCase().match(/(?:house=)?([a-z0-9]{16,32})\s*$/);
@@ -1083,7 +1449,7 @@ document.addEventListener('submit', e => {
   if (e.target.id === 'addTodo') {
     e.preventDefault();
     const t = $('#todo').value.trim();
-    if (t && !state.todo.some(x => x.toLowerCase() === t.toLowerCase())) state.todo.push(t);
+    if (t && !state.todo.some(x => x.toLowerCase() === t.toLowerCase())) { state.todo.push(t); note(`added ${t} to the shopping list`); }
     save(); render(); $('#todo')?.focus();
     return;
   }
@@ -1103,8 +1469,9 @@ document.addEventListener('visibilitychange', async () => {
     if (v && V && '?v=' + encodeURIComponent(v) !== V && $('#sheet').hidden && document.activeElement?.id !== 'extra') return location.reload();
   } catch { /* offline: carry on with this copy */ }
   tidy(); pull();
-  if ($('#sheet').hidden) render();
+  if ($('#sheet').hidden) render(); else if ($('#sheet .steps')) stayAwake(true);
 });
+window.addEventListener('online', () => pull()); // back in signal: send what was changed and fetch what the other phone did
 setInterval(() => { if (tab === 'home' && $('#sheet').hidden && !document.hidden) render(); }, 60000);
 
 keep();
@@ -1123,7 +1490,16 @@ async function checkWriter(tries = 3) {
   } catch { if (tries > 1) setTimeout(() => checkWriter(tries - 1), 4000); }
 }
 checkWriter();
-resub();
+// The background helper keeps a copy of the app on the phone so it opens with no signal, and shows the alerts.
+async function warm() {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    await navigator.serviceWorker.register(swUrl());
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({ warm: V });
+  } catch { /* private browsing and some browsers have no helper; the app still works online */ }
+}
+warm().then(() => resub());
 
 document.addEventListener('change', e => {
   if (e.target.id === 'briefTime' && /^\d\d:\d\d$/.test(e.target.value)) { state.brief = e.target.value; save(); stale = true; toast('Reminder time saved'); }
