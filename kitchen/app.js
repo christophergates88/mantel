@@ -304,7 +304,9 @@ function recipeSheet(id) {
   <div class="chips wrap">${week().map(d => `<button class="chip" data-plan="${d.key}" data-id="${r.id}" aria-pressed="${state.plan[d.key] === r.id}">${d.i < 2 ? dayName(d) : d.date.toLocaleDateString('en-US', { weekday: 'short' })}</button>`).join('')}</div>
   <h3>What goes in</h3>
   <ul class="ings">${r.ings.map(([iid, amt]) => `<li class="${state.have[iid] ? 'got' : 'need'}">
-    <span>${esc(CATALOG[iid][0])}<small>${esc(amt)}</small></span><em>${state.have[iid] ? 'have' : 'need'}</em></li>`).join('')}</ul>
+    <span>${esc(CATALOG[iid][0])}<small>${esc(amt)}</small></span>
+    <button class="flip" data-ing="${iid}" data-rid="${r.id}" aria-label="${esc(CATALOG[iid][0])}: ${state.have[iid] ? 'have it. Tap if you do not' : 'need it. Tap if you have it'}">${state.have[iid] ? 'have' : 'need'}</button></li>`).join('')}</ul>
+  <p class="safe">Tap have or need to correct it.</p>
   <h3>How</h3>
   <ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
   <p class="little"><b>For the little one.</b> ${esc(r.little)} Salt the grown-up plates at the table.</p>
@@ -467,6 +469,14 @@ document.addEventListener('click', e => {
     save(); b.setAttribute('aria-pressed', !!state.have[d.have]);
     const n = shopping().items.length; $('#listCount').hidden = !n; $('#listCount').textContent = n;
     return;
+  }
+  if (d.ing) {
+    if (state.have[d.ing]) delete state.have[d.ing]; else state.have[d.ing] = true;
+    save();
+    const top = $('#sheet').scrollTop;
+    recipeSheet(d.rid); $('#sheet').scrollTop = top;
+    $(`#sheet [data-ing="${d.ing}"]`)?.focus({ preventScroll: true });
+    return render();
   }
   if (d.extra) { state.extra.splice(+d.extra, 1); save(); return render(); }
   if (d.bought) { state.have[d.bought] = true; save(); render(); return toast(`${CATALOG[d.bought][0]} is in the kitchen`); }
