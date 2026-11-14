@@ -24,7 +24,6 @@ ${catalog.map(c => `${c.id} = ${c.name}`).join('\n')}
 For each item: if it is one of those ingredients (same food, any brand or size; fresh, frozen or canned must match), give that id. Otherwise id is null. Give a short plain name either way (for example "Eggs", "Whole milk", "Cheddar cheese"). List each food once.
 Reply with ONLY this JSON, no other words: {"store": "w" | "i" | null, "items": [{"id": "..." | null, "name": "...", "price": number | null}]}`;
 
-let localCount = { day: '', n: 0 };
 
 // ---------------------------------------------------------------- morning notifications (Web Push, no message body)
 
@@ -61,23 +60,60 @@ async function morning(env) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(p => [p.type, p.value]));
   const day = `${parts.year}-${parts.month}-${parts.day}`, now = +parts.hour * 60 + +parts.minute;
   for (const code of JSON.parse((await env.SIMMER_KV.get('pushidx')) || '[]')) {
-    const doc = JSON.parse((await env.SIMMER_KV.get(`house:${code}`)) || 'null');
-    if (!doc || !doc.briefs || !doc.briefs[day]) continue;
-    const [h, m] = String(doc.brief || '07:00').split(':').map(Number);
-    const at = h * 60 + m;
-    if (!(now >= at && now < at + 15)) continue;
-    if (await env.SIMMER_KV.get(`sent:${code}:${day}`)) continue;
-    await env.SIMMER_KV.put(`sent:${code}:${day}`, '1', { expirationTtl: 172800 });
-    const subs = JSON.parse((await env.SIMMER_KV.get(`push:${code}`)) || '[]');
-    const results = await Promise.all(subs.map(sub => sendPush(env, sub)));
-    const live = subs.filter((_, i) => results[i] !== 404 && results[i] !== 410);
-    if (live.length !== subs.length) await env.SIMMER_KV.put(`push:${code}`, JSON.stringify(live));
+    try {
+      const doc = JSON.parse((await env.SIMMER_KV.get(`house:${code}`)) || 'null');
+      if (!doc || !doc.briefs || !doc.briefs[day]) continue;
+      const [h, m] = String(doc.brief || '07:00').split(':').map(Number);
+      const at = Math.min((h * 60 + m) || 420, 23 * 60);        // a very late time is sent at 11 PM so it never slips past midnight
+      if (!(now >= at && now < at + 120)) continue;             // two-hour window: a skipped or late run still sends, once
+      if (await env.SIMMER_KV.get(`sent:${code}:${day}`)) continue;
+      const subs = JSON.parse((await env.SIMMER_KV.get(`push:${code}`)) || '[]');
+      if (!subs.length) continue;
+      const results = await Promise.all(subs.map(sub => sendPush(env, sub)));
+      if (results.some(c => c >= 200 && c < 300)) await env.SIMMER_KV.put(`sent:${code}:${day}`, '1', { expirationTtl: 172800 });
+      const live = subs.filter((_, i) => ![403, 404, 410].includes(results[i]));
+      if (live.length !== subs.length) await env.SIMMER_KV.put(`push:${code}`, JSON.stringify(live));
+    } catch { /* one household's trouble must not stop the others */ }
   }
+}
+
+// ---------------------------------------------------------------- who may use it, and how much
+
+// A kitchen is known once its shared document exists. Only known kitchens can read photos, write recipes or store anything.
+const known = async (env, code) => { if (!/^[a-z0-9]{16,32}$/.test(String(code || ''))) return false; const d = await env.SIMMER_KV.get(`house:${code}`); return !!d && !d.startsWith('{"gone":true'); };
+// Daily allowances, per kitchen and overall. KV counters can be outrun by a burst of simultaneous requests, so the real
+// ceiling on spending is the limit set on the API key itself; these stop ordinary overuse and slow abuse.
+async function allowance(env, what, code, perHouse, overall) {
+  const day = new Date().toISOString().slice(0, 10);
+  const keys = [`${what}:${day}:${code}`, `${what}:${day}`];
+  const [mine, all] = (await Promise.all(keys.map(k => env.SIMMER_KV.get(k)))).map(v => parseInt(v || '0', 10));
+  if (mine >= perHouse || all >= overall) return false;
+  await Promise.all([env.SIMMER_KV.put(keys[0], String(mine + 1), { expirationTtl: 172800 }), env.SIMMER_KV.put(keys[1], String(all + 1), { expirationTtl: 172800 })]);
+  return true;
+}
+const num0 = (v, d) => { const n = parseInt(v || '', 10); return Number.isFinite(n) ? n : d; };
+async function bodyJSON(request, maxBytes) {
+  const buf = await request.arrayBuffer();
+  if (buf.byteLength > maxBytes) return { tooBig: true };
+  try { const v = JSON.parse(new TextDecoder().decode(buf)); return v && typeof v === 'object' && !Array.isArray(v) ? { v } : {}; } catch { return {}; }
 }
 
 export default {
   async scheduled(event, env, ctx) { ctx.waitUntil(morning(env)); },
   async fetch(request, env) {
+    try { return await handle(request, env); }
+    catch (e) {
+      console.log('simmer error', String(e && e.stack || e).slice(0, 500));
+      const origin = request.headers.get('Origin') || '';
+      const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+      return new Response(JSON.stringify({ error: 'Something went wrong on the server. Try again in a minute.' }), { status: 500,
+        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || 'null', 'Vary': 'Origin' } });
+    }
+  },
+};
+
+async function handle(request, env) {
+  {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -85,6 +121,7 @@ export default {
       'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || 'null',
       'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'content-type',
+      'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
     };
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
@@ -106,14 +143,30 @@ export default {
         return new Response(doc || 'null', { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cors } });
       }
       if (request.method === 'PUT') {
-        const text = await request.text();
-        if (text.length > 300000) return json({ error: 'too large' }, 413);
-        let doc;
-        try { doc = JSON.parse(text); } catch { return json({ error: 'bad request' }, 400); }
-        if (!doc || typeof doc !== 'object' || typeof doc.updatedAt !== 'number') return json({ error: 'bad request' }, 400);
+        const got = await bodyJSON(request, 400000);
+        if (got.tooBig) return json({ error: 'too large' }, 413);
+        const doc = got.v;
+        if (!doc || typeof doc.updatedAt !== 'number') return json({ error: 'bad request' }, 400);
+        if (doc.updatedAt > Date.now() + 120000) return json({ error: 'This phone\'s clock is wrong, so the change was not saved. Check the date and time.' }, 400);
         const cur = JSON.parse((await env.SIMMER_KV.get(key)) || 'null');
-        if (cur && cur.updatedAt > doc.updatedAt) return json({ ok: false, newer: cur });
-        await env.SIMMER_KV.put(key, text);
+        if (cur && cur.gone) return json({ ok: false, newer: cur });
+        // Someone else saved since this phone last looked: hand back their copy instead of overwriting it.
+        if (cur && (cur.updatedAt > doc.updatedAt || (typeof doc.base === 'number' && cur.updatedAt > doc.base))) return json({ ok: false, newer: cur });
+        if (!cur) {
+          // A brand-new kitchen. A phone moving to a new link names its old kitchen; otherwise only a few may start each day.
+          const from = url.searchParams.get('from');
+          if (!(from && await known(env, from)) && !(await allowance(env, 'newhouse', 'all', 4, 4))) return json({ error: 'Too many new kitchens were started today. Try again tomorrow.' }, 429);
+        }
+        delete doc.base;
+        await env.SIMMER_KV.put(key, JSON.stringify(doc));
+        return json({ ok: true });
+      }
+      if (request.method === 'DELETE') {
+        // The family made a new link: retire this kitchen, its photos and its reminders. Phones still on it are told to ask for the new link.
+        const list = await env.SIMMER_KV.list({ prefix: `photo:${house[1]}:` });
+        await Promise.all(list.keys.map(k => env.SIMMER_KV.delete(k.name)));
+        await env.SIMMER_KV.delete(`push:${house[1]}`);
+        await env.SIMMER_KV.put(key, JSON.stringify({ gone: true, updatedAt: Date.now() }), { expirationTtl: 90 * 86400 });
         return json({ ok: true });
       }
       return json({ error: 'not found' }, 404);
@@ -129,11 +182,13 @@ export default {
         return new Response(img, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' } });
       }
       if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
+      if (!(await known(env, photo[1]))) return json({ error: 'This kitchen is not set up yet. Open Simmer and try again.' }, 403);
       if (request.method === 'DELETE') { await env.SIMMER_KV.delete(key); return json({ ok: true }); }
       if (request.method === 'PUT') {
         const body = await request.arrayBuffer();
         const b = new Uint8Array(body);
         if (b.length < 100 || b.length > 400000 || b[0] !== 0xff || b[1] !== 0xd8) return json({ error: 'That photo could not be saved.' }, 400);
+        if (!(await allowance(env, 'photo', photo[1], 30, 60))) return json({ error: 'Today\'s limit for dish photos is used up. It resets tomorrow.' }, 429);
         await env.SIMMER_KV.put(key, body);
         return json({ ok: true });
       }
@@ -150,66 +205,61 @@ export default {
         if (!subs.length) return json({ error: 'No phone has notifications turned on yet.' }, 400);
         return json({ sent: await Promise.all(subs.map(sub => sendPush(env, sub))) });
       }
-      let body; try { body = await request.json(); } catch { return json({ error: 'bad request' }, 400); }
-      const endpoint = String(body.endpoint || body.subscription?.endpoint || '');
+      const got = await bodyJSON(request, 4000);
+      if (!got.v) return json({ error: 'bad request' }, 400);
+      const endpoint = String(got.v.endpoint || '');
       if (!pushHostOk(endpoint)) return json({ error: 'This phone\'s notification service is not supported.' }, 400);
+      if (push[1] === 'sub' && !(await known(env, code))) return json({ error: 'This kitchen is not set up yet. Open Simmer and try again.' }, 403);
       subs = subs.filter(x => x !== endpoint);
       if (push[1] === 'sub') subs = [...subs, endpoint].slice(-6);
       await env.SIMMER_KV.put(key, JSON.stringify(subs));
       const idx = new Set(JSON.parse((await env.SIMMER_KV.get('pushidx')) || '[]'));
-      if (subs.length) idx.add(code); else idx.delete(code);
-      await env.SIMMER_KV.put('pushidx', JSON.stringify([...idx].slice(-300)));
+      if (subs.length) { if (!idx.has(code) && idx.size >= 300) return json({ error: 'Reminders are full right now.' }, 429); idx.add(code); } else idx.delete(code);
+      await env.SIMMER_KV.put('pushidx', JSON.stringify([...idx]));
       return json({ ok: true, phones: subs.length });
     }
 
     if (request.method === 'POST' && url.pathname === '/ideas') {
       if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
-      if (!env.ANTHROPIC_API_KEY) return json({ error: 'New ideas are not switched on yet.' }, 503);
+      if (!env.ANTHROPIC_API_KEY || !env.SIMMER_KV) return json({ error: 'New ideas are not switched on yet.' }, 503);
       return ideas(request, env, json);
     }
 
     if (request.method !== 'POST' || url.pathname !== '/read') return json({ error: 'not found' }, 404);
     if (!allowed.includes(origin)) return json({ error: 'This reader only answers the Simmer page.' }, 403);
 
-    const maxBytes = 6 * 1024 * 1024;
-    if (Number(request.headers.get('content-length') || 0) > maxBytes) return json({ error: 'Those photos are too large. Try fewer at once.' }, 413);
-    let body;
-    try { body = await request.json(); } catch { return json({ error: 'bad request' }, 400); }
+    if (!env.SIMMER_KV) return json({ error: 'The photo reader is not set up.' }, 503);
+    const got = await bodyJSON(request, 6 * 1024 * 1024);
+    if (got.tooBig) return json({ error: 'Those photos are too large. Try fewer at once.' }, 413);
+    const body = got.v;
+    if (!body) return json({ error: 'bad request' }, 400);
+    if (!(await known(env, body.house))) return json({ error: 'This kitchen is not set up yet. Close Simmer, open it again and retry.' }, 403);
     const kind = body.kind === 'receipt' ? 'receipt' : 'pantry';
     const images = Array.isArray(body.images) ? body.images.filter(s => typeof s === 'string' && /^[A-Za-z0-9+/=]+$/.test(s)).slice(0, 4) : [];
     const catalog = Array.isArray(body.catalog)
-      ? body.catalog.slice(0, 120).map(c => ({ id: String(c.id || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 30), name: String(c.name || '').replace(/[\r\n]/g, ' ').slice(0, 60) })).filter(c => c.id && c.name)
+      ? body.catalog.slice(0, 160).filter(c => c && typeof c === 'object').map(c => ({ id: String(c.id || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 40), name: String(c.name || '').replace(/[\r\n<>]/g, ' ').slice(0, 60) })).filter(c => c.id && c.name)
       : [];
     if (!images.length) return json({ error: 'No photo arrived. Try again.' }, 400);
+    if (!(await allowance(env, 'reads', body.house, num0(env.MAX_READS_PER_HOUSE, 25), num0(env.MAX_READS_PER_DAY, 40)))) return json({ error: "Today's photo limit is used up. It resets tomorrow." }, 429);
 
-    // Daily cap, so a stranger or a bug can't run up a bill.
-    const cap = parseInt(env.MAX_READS_PER_DAY || '40', 10);
-    const day = new Date().toISOString().slice(0, 10);
-    let used;
-    if (env.SIMMER_KV) {
-      used = parseInt((await env.SIMMER_KV.get(`reads:${day}`)) || '0', 10);
-      if (used < cap) await env.SIMMER_KV.put(`reads:${day}`, String(used + 1), { expirationTtl: 172800 });
-    } else {
-      if (localCount.day !== day) localCount = { day, n: 0 };
-      used = localCount.n++;
-    }
-    if (used >= cap) return json({ error: "Today's photo limit is used up. It resets tomorrow." }, 429);
-
-    let text;
+    let text, stop;
     try {
-      text = await ask(env, PROMPT(kind, catalog), images);
+      ({ text, stop } = await claudeOrFree(env, PROMPT(kind, catalog), images));
     } catch (e) {
-      return json({ error: 'The photo reader is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502);
+      console.log('read failed', String(e.message || e).slice(0, 300));
+      return json({ error: e.credit ? 'The photo reader is out of credit. Top up the Anthropic balance.' : 'The photo reader is having trouble. Try again in a minute.' }, 502);
     }
+    if (stop === 'max_tokens') return json({ error: 'There was too much in those photos to list. Try one photo at a time.' }, 502);
 
     const parsed = extractJSON(text);
     if (!parsed || !Array.isArray(parsed.items)) return json({ error: 'The photo could not be read clearly. Try again with more light.' }, 502);
-    const known = new Set(catalog.map(c => c.id));
+    const ids = new Set(catalog.map(c => c.id));
     const seen = new Set();
     const items = [];
     for (const it of parsed.items.slice(0, 80)) {
-      const id = known.has(it.id) ? it.id : null;
-      const name = String(it.name || '').trim().slice(0, 40);
+      if (!it || typeof it !== 'object') continue;
+      const id = ids.has(it.id) ? it.id : null;
+      const name = String(it.name || '').replace(/[<>]/g, ' ').trim().slice(0, 40);
       const key = id || name.toLowerCase();
       if (!key || seen.has(key)) continue;
       seen.add(key);
@@ -218,61 +268,59 @@ export default {
     }
     const store = kind === 'receipt' && (parsed.store === 'w' || parsed.store === 'i') ? parsed.store : null;
     return json({ items, store });
-  },
-};
+  }
+}
 
-// One question to the model, with optional photos. Claude when a key is set, otherwise Workers AI.
-async function ask(env, prompt, images = [], maxTokens = 3000) {
-  if (env.ANTHROPIC_API_KEY) {
-    const res = await fetch(ANTHROPIC_URL, {
+// One question to Claude. Thinking is turned down so the allowance goes to the answer; models differ in which setting
+// they accept, so on a refusal that names the setting the next form is tried. Any other refusal stops at once.
+async function claude(env, model, content, maxTokens) {
+  let res, errText = '';
+  for (const extra of [{ thinking: { type: 'disabled' } }, { thinking: { type: 'between_tools' }, output_config: { effort: 'low' } }, { output_config: { effort: 'low' } }, {}]) {
+    res = await fetch(ANTHROPIC_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: env.MODEL || 'claude-haiku-5-5',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: [
-          ...images.map(data => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
-          { type: 'text', text: prompt },
-        ] }],
-      }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content }], ...extra }),
     });
-    if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
-    const data = await res.json();
-    return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
+    if (res.ok) break;
+    errText = (await res.text()).slice(0, 400);
+    if (!(res.status === 400 && /thinking|output_config|effort/i.test(errText))) break;
+  }
+  if (!res.ok) {
+    const e = new Error(`model service ${res.status}: ${errText.slice(0, 200)}`);
+    e.credit = /credit balance|billing|purchase credits/i.test(errText);
+    throw e;
+  }
+  const data = await res.json();
+  return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model, stop: data.stop_reason };
+}
+
+// Photos: Claude when a key is set, otherwise the free Workers AI vision model.
+async function claudeOrFree(env, prompt, images, maxTokens = 4000) {
+  if (env.ANTHROPIC_API_KEY) {
+    return claude(env, env.MODEL || 'claude-haiku-5-5', [
+      ...images.map(data => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
+      { type: 'text', text: prompt },
+    ], maxTokens);
   }
   if (!env.AI) throw new Error('no model configured');
   const out = await env.AI.run(env.CF_VISION_MODEL || '@cf/mistralai/mistral-small-3.1-24b-instruct', {
     max_tokens: maxTokens,
-    messages: [{ role: 'user', content: images.length ? [
+    messages: [{ role: 'user', content: [
       { type: 'text', text: prompt },
       ...images.map(data => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${data}` } })),
-    ] : prompt }],
+    ] }],
   });
   const text = out?.response ?? out?.choices?.[0]?.message?.content ?? '';
-  return typeof text === 'string' ? text : JSON.stringify(text);
+  return { text: typeof text === 'string' ? text : JSON.stringify(text), stop: '' };
 }
 
 // Recipe writing is only switched on with a Claude key. The free Workers AI models were tried on 2026-11-14 and wrote
 // recipes that were not good enough to cook from (wrong methods, and one unsafe way of cooking chicken for a toddler).
-async function write(env, prompt, maxTokens) {
+// Recipes get the stronger model; photos stay on the cheap one.
+const write = (env, prompt, maxTokens) => {
   if (!env.ANTHROPIC_API_KEY) throw new Error('no writer configured');
-  const model = env.IDEAS_MODEL || 'claude-sonnet-5-5'; // recipes get the stronger model; photos stay on the cheap one
-  // Thinking is switched off so the whole allowance goes to the answer; if the service refuses that setting, ask again without it.
-  const call = extra => fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }], ...extra }),
-  });
-  // Models differ in how thinking is turned down, so try each accepted form in turn.
-  let res;
-  for (const extra of [{ thinking: { type: 'disabled' } }, { thinking: { type: 'between_tools' }, output_config: { effort: 'low' } }, { output_config: { effort: 'low' } }, {}]) {
-    res = await call(extra);
-    if (res.status !== 400) break;
-  }
-  if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
-  const data = await res.json();
-  return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model, stop: data.stop_reason };
-}
+  return claude(env, env.IDEAS_MODEL || 'claude-sonnet-5-5', prompt, maxTokens);
+};
 
 // ---------------------------------------------------------------- new recipe ideas
 
@@ -318,33 +366,29 @@ const PROPER = /^(sunday|greek|tuscan|italian|french|thai|mexican|cuban|korean|c
 const sentenceCase = name => name.split(' ').map((w, i) => PROPER.test(w) ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : i === 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()).join(' ');
 
 async function ideas(request, env, json) {
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'bad request' }, 400); }
+  const got = await bodyJSON(request, 200000);
+  const body = got.v;
+  if (!body) return json({ error: 'bad request' }, got.tooBig ? 413 : 400);
+  if (!(await known(env, body.house))) return json({ error: 'This kitchen is not set up yet. Close Simmer, open it again and retry.' }, 403);
   const kind = ['dinner', 'breakfast', 'snack'].includes(body.kind) ? body.kind : 'dinner';
-  const catalog = (Array.isArray(body.catalog) ? body.catalog : []).slice(0, 160)
+  const catalog = (Array.isArray(body.catalog) ? body.catalog : []).slice(0, 160).filter(c => c && typeof c === 'object')
     .map(c => ({ id: str(c.id, 40).replace(/[^A-Za-z0-9_]/g, ''), name: str(c.name, 60) })).filter(c => c.id && c.name);
-  const known = new Map(catalog.map(c => [c.id, c.name]));
-  const have = (Array.isArray(body.have) ? body.have : []).slice(0, 80).map(id => known.get(str(id, 40))).filter(Boolean);
+  const byId = new Map(catalog.map(c => [c.id, c.name]));
+  const have = (Array.isArray(body.have) ? body.have : []).slice(0, 80).map(id => byId.get(str(id, 40))).filter(Boolean);
   const names = list => (Array.isArray(list) ? list : []).slice(0, 80).map(n => str(n, 60)).filter(Boolean);
-  const looks = (Array.isArray(body.looks) ? body.looks : []).slice(0, 60)
+  const looks = (Array.isArray(body.looks) ? body.looks : []).slice(0, 60).filter(l => l && typeof l === 'object')
     .map(l => ({ id: str(l.id, 40).replace(/[^a-z0-9-]/g, ''), name: str(l.name, 60) })).filter(l => l.id && l.name);
   if (!catalog.length || !looks.length) return json({ error: 'bad request' }, 400);
 
-  const cap = parseInt(env.MAX_IDEAS_PER_DAY || '40', 10);
-  const day = new Date().toISOString().slice(0, 10);
-  if (env.SIMMER_KV) {
-    const used = parseInt((await env.SIMMER_KV.get(`ideas:${day}`)) || '0', 10);
-    if (used >= cap) return json({ error: "Today's limit for new ideas is used up. It resets tomorrow." }, 429);
-    await env.SIMMER_KV.put(`ideas:${day}`, String(used + 1), { expirationTtl: 172800 });
-  }
+  if (!(await allowance(env, 'ideas', body.house, num0(env.MAX_IDEAS_PER_HOUSE, 12), num0(env.MAX_IDEAS_PER_DAY, 20)))) return json({ error: "Today's limit for new ideas is used up. It resets tomorrow." }, 429);
 
   let text;
   let model = '', stop = '';
   const avoid = names(body.avoid);
-  try { ({ text, model, stop } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 12000)); }
-  catch (e) { return json({ error: 'The recipe writer is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502); }
+  try { ({ text, model, stop } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 5000)); }
+  catch (e) { console.log('ideas failed', String(e.message || e).slice(0, 300)); return json({ error: e.credit ? 'The recipe writer is out of credit. Top up the Anthropic balance.' : 'The recipe writer is having trouble. Try again in a minute.' }, 502); }
   const parsed = extractJSON(text);
-  if (!parsed || !Array.isArray(parsed.recipes)) return json({ error: 'The ideas came back garbled. Try again.', stop, head: String(text).slice(0, 300), tail: String(text).slice(-300) }, 502);
+  if (!parsed || !Array.isArray(parsed.recipes)) { console.log('ideas unreadable', stop, String(text).slice(-200)); return json({ error: stop === 'max_tokens' ? 'The ideas ran long and were cut off. Try again.' : 'The ideas came back garbled. Try again.' }, 502); }
 
   const sweet = /\b(sugar|honey|maple|agave|syrup|molasses|ketchup|barbecue|bbq|teriyaki)\b/i;
   const lookIds = new Set(looks.map(l => l.id));
@@ -352,11 +396,12 @@ async function ideas(request, env, json) {
   const taken = new Set(avoid.map(n => n.toLowerCase()));
   for (const r of parsed.recipes.slice(0, 4)) {
     if (recipes.length === 3) break;
-    const ings = (Array.isArray(r.ings) ? r.ings : []).slice(0, 10).map(g => {
-      const id = known.has(g.id) ? g.id : null;
+    if (!r || typeof r !== 'object') continue;
+    const ings = (Array.isArray(r.ings) ? r.ings : []).slice(0, 10).filter(g => g && typeof g === 'object').map(g => {
+      const id = byId.has(g.id) ? g.id : null;
       const walmart = Math.round(num(g.walmart, 0.25, 40, 2.5) * 100) / 100;
       return {
-        id, name: id ? known.get(id) : str(g.name, 40), amount: str(g.amount, 40) || 'to taste', packs: Math.round(num(g.packs, 1, 4, 1)),
+        id, name: id ? byId.get(id) : str(g.name, 40), amount: str(g.amount, 40) || 'to taste', packs: Math.round(num(g.packs, 1, 4, 1)),
         section: SECTIONS.includes(g.section) ? g.section : 'Cans and jars', buy: str(g.buy, 30) || 'each',
         walmart, ingles: Math.round(Math.max(walmart, num(g.ingles, 0.25, 50, walmart * 1.25)) * 100) / 100,
       };
