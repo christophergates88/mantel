@@ -424,6 +424,7 @@ function homeView() {
   const hoursLeft = (dinnerAt() - Date.now()) / 36e5;
   const ate = !cook && !planned && state.last && state.last.day === today() && recipe(state.last.id);
   const tooLate = !cook && !planned && !special && !ate && r.hours > hoursLeft + 1;
+  const missed = !cook && planned && planned.hours > hoursLeft + 1; // tonight's dinner was planned but never went on
   const next = week().slice(1).map(d => ({ d, r: recipe(state.plan[d.key]), v: state.plan[d.key] })).find(x => x.r || SPECIAL[x.v]);
   const nextLine = next ? (next.r ? `${dayName(next.d)}: ${esc(soft(next.r.name))}, in the pot by ${clock(new Date(dinnerAt() - next.r.hours * 36e5))}.` : `${dayName(next.d)}: ${SPECIAL[next.v].toLowerCase()}.`) : 'Nothing is planned for tomorrow yet.';
   const miss = missing(r).length;
@@ -440,6 +441,11 @@ function homeView() {
     body = `<p class="kicker">Tonight</p><h2>${special}</h2>
       <p class="when">${tonight === '@leftovers' && leftName(today()) ? `From the ${esc(soft(leftName(today())))}. ` : ''}The pot gets the night off.</p>
       <div class="acts"><button class="btn ghost" data-pick="${today()}">Change</button></div>`;
+  } else if (missed) {
+    body = `<p class="kicker">Tonight</p><h2>Too late for the ${esc(soft(r.name))}</h2>
+      <p class="when">Started now, it would not be ready until ${clock(new Date(Date.now() + r.hours * 36e5))}.</p>
+      <p class="stock">Move it to tomorrow and the dinners planned after it slide back a day too.</p>
+      <div class="acts"><button class="btn brass" data-slide="${today()}">Move it to tomorrow</button><button class="btn ghost" data-start-back="${r.id}">It is already on</button><button class="btn ghost" data-pick="${today()}">Change</button></div>`;
   } else if (planned) {
     body = `<p class="kicker">Tonight</p><h2>${esc(r.name)}</h2>
       <p class="when">${timing(r)}</p>
@@ -469,8 +475,7 @@ function homeView() {
   return `
   <section class="hero">${special || tooLate ? '' : pic(ate || r)}<div class="panel">${body}</div></section>
   ${jobs.length ? `<p class="little jobs"><b>One job tonight.</b> ${jobs.map(x => esc(thawLine(x))).join(' ')}</p>` : ''}
-  ${who ? '' : `<div class="whose"><p><b>Whose phone is this?</b> Then Simmer can say who changed what.</p>
-    <div class="acts"><button class="btn small" data-who="Katie">Katie</button><button class="btn small" data-who="Chris">Chris</button><button class="btn small line" data-who-ask>Someone else</button></div></div>`}
+  ${setupCard()}
 
   <h2 class="shelf">The week</h2>
   <ul class="days">${all.slice(0, 7).map(dayRow).join('')}</ul>
@@ -515,6 +520,36 @@ function homeView() {
   </div>`;
 }
 let showNext = false;
+// One short prompt at a time for a phone that is new to Simmer: whose it is, then the home screen, then alerts.
+const hinted = k => { try { return localStorage.getItem('simmer.hint.' + k) === '1'; } catch { return true; } };
+function setupCard() {
+  if (!who) return `<div class="whose"><p><b>Whose phone is this?</b> Then Simmer can say who changed what.</p>
+    <div class="acts"><button class="btn small" data-who="Katie">Katie</button><button class="btn small" data-who="Chris">Chris</button><button class="btn small line" data-who-ask>Someone else</button></div></div>`;
+  const iPhone = /iPhone|iPad|iPod/.test(navigator.userAgent), asApp = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if (iPhone && !asApp && !hinted('home')) return `<div class="whose hint"><p><b>Put Simmer on your home screen.</b> Tap the Share button at the bottom of Safari, then Add to Home Screen. It opens like an app from there, and alerts only work that way.</p>
+    <div class="acts"><button class="btn small line" data-hint="home">Got it</button></div></div>`;
+  if ((asApp || !iPhone) && canPush() && !pushIsOn() && !hinted('alerts')) return `<div class="whose hint"><p><b>Want a nudge when the pot needs to go on?</b> Simmer can send the morning plan, a reminder to start the pot, and a reminder the night before to thaw the meat.</p>
+    <div class="acts"><button class="btn small" data-morning>Set up alerts</button><button class="btn small line" data-hint="alerts">Not now</button></div></div>`;
+  return '';
+}
+// Moves a dinner to the next night. The dinners planned straight after it move back a day too, up to the first open night.
+function slide(key) {
+  const all = days(14), at = all.findIndex(d => d.key === key);
+  if (at < 0 || !state.plan[key]) return closeSheet();
+  let end = at;
+  while (end < all.length && state.plan[all[end].key]) end++;
+  if (end >= all.length) return toast('There is no open night in the next two weeks to move it into');
+  const undo = snap(), name = SPECIAL[state.plan[key]] || recipe(state.plan[key])?.name || 'dinner';
+  for (let n = end; n > at; n--) {
+    const to = all[n].key, from = all[n - 1].key;
+    state.plan[to] = state.plan[from];
+    if (state.left[from]) state.left[to] = state.left[from]; else delete state.left[to];
+  }
+  delete state.plan[key]; delete state.left[key];
+  note(`moved ${soft(name)} ${at === 0 ? 'to tomorrow' : 'a day later'}`);
+  save(); closeSheet(); render();
+  toast(end - at > 1 ? `Moved. ${end - at} dinners slid back a day.` : at === 0 ? 'Moved to tomorrow' : 'Moved a day later', undo);
+}
 const shortDate = key => new Date(key + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const prepMissing = p => (p.kind ? missing(p).length : p.ings.filter(([id]) => !p.pack.includes(id) && !state.have[id]).length);
 const actRow = a => `<li><span><b>${a.w ? (a.w === who ? 'You' : esc(a.w)) : 'Someone'}</b> ${esc(actText(a))}</span><small>${ago(a.t)}</small></li>`;
@@ -801,7 +836,7 @@ function pickSheet(key) {
   <div class="acts two quick">
     <button class="btn line" data-plan="${key}" data-id="@leftovers" ${cur === '@leftovers' ? 'aria-current="true"' : ''}>Leftovers</button>
     <button class="btn line" data-plan="${key}" data-id="@out" ${cur === '@out' ? 'aria-current="true"' : ''}>Eating out</button>
-    ${cur ? `<button class="btn line" data-plan="${key}" data-id="">Clear this night</button>` : ''}
+    ${cur ? `<button class="btn line" data-plan="${key}" data-id="">Clear this night</button><button class="btn line" data-slide="${key}">Move a day later</button>` : ''}
   </div>
   ${rot.length ? `<h3>On rotation</h3>
   <button class="btn wide spin" data-spin="${key}">Surprise me from the rotation</button>
@@ -1189,6 +1224,17 @@ document.addEventListener('click', e => {
         <div><input id="whoName" autocomplete="given-name" maxlength="20" value="${esc(who)}"><button class="btn small">Save</button></div></form>`);
   }
   if ('nextWeek' in d) { showNext = !showNext; return render(); }
+  if (d.hint) { try { localStorage.setItem('simmer.hint.' + d.hint, '1'); } catch { /* shows again next time */ } return render(); }
+  if (d.slide) return slide(d.slide);
+  if (d.startBack) {
+    // It went on earlier and nobody tapped: count it as started in time to be ready at dinner.
+    const r = recipe(d.startBack), bag = packOf(r), midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    for (const [iid] of r.ings) if (!bag || bag.includes(iid)) state.have[iid] = true;
+    delete state.packs[r.id];
+    state.plan[today()] = r.id; state.cooking = { id: r.id, start: Math.max(midnight.getTime(), Math.min(Date.now(), dinnerAt() - r.hours * 36e5)) };
+    note(`said the ${soft(r.name)} is in the pot`);
+    save(); render(); return toast('Timer set to be ready at dinner time');
+  }
   if ('gotoPacks' in d) { tab = 'recipes'; shelfKind = 'dinner'; filter = 'pack'; render(); window.scrollTo(0, 0); return; }
   if (d.span) { span = d.span === '14' ? 14 : 7; try { localStorage.setItem('simmer.span', String(span)); } catch { /* no storage */ } return render(); }
   if ('acts' in d) return openSheet(`${closer}<h2 id="sheetTitle">Lately</h2><ul class="lately">${[...state.acts].reverse().map(actRow).join('')}</ul>`);

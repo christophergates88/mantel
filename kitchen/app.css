@@ -274,3 +274,4 @@ a.btn { text-decoration: none; }
 .buy tbody tr.sec { border-top: 0; }
 .buy tbody tr.sec th { display: table-cell; padding: 1.1rem 0 .35rem; font: 400 1.125rem/1.2 var(--display); color: var(--walnut); }
 .buy tbody tr.sec + tr { border-top: 1px solid var(--edge); }
+.whose.hint .acts .btn { flex: 0 1 auto; }

@@ -30,7 +30,7 @@ async function versioned(href) {
 async function fresh(href, key = href) {
   const cache = await caches.open(CACHE);
   try {
-    const res = await fetch(href, { cache: 'no-store', signal: AbortSignal.timeout(2500) });
+    const res = await fetch(href, { cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined });
     if (res.ok) await cache.put(key, res.clone());
     return res;
   } catch (err) {
