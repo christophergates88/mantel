@@ -195,3 +195,4 @@ main { max-width: 30rem; margin: 0 auto; padding: 1.25rem 1.25rem 0; outline: no
   .sheet, .working { animation: none; }
   .toast { transition: none; }
 }
+.count[hidden], [hidden] { display: none !important; }
