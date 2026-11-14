@@ -170,8 +170,12 @@ async function write(env, prompt, maxTokens) {
     headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }], ...extra }),
   });
-  let res = await call({ thinking: { type: 'disabled' } });
-  if (res.status === 400) res = await call({});
+  // Models differ in how thinking is turned down, so try each accepted form in turn.
+  let res;
+  for (const extra of [{ thinking: { type: 'disabled' } }, { thinking: { type: 'between_tools' }, output_config: { effort: 'low' } }, { output_config: { effort: 'low' } }, {}]) {
+    res = await call(extra);
+    if (res.status !== 400) break;
+  }
   if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
   const data = await res.json();
   return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model, stop: data.stop_reason };
@@ -244,7 +248,7 @@ async function ideas(request, env, json) {
   let text;
   let model = '', stop = '';
   const avoid = names(body.avoid);
-  try { ({ text, model, stop } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 8000)); }
+  try { ({ text, model, stop } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 12000)); }
   catch (e) { return json({ error: 'The recipe writer is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502); }
   const parsed = extractJSON(text);
   if (!parsed || !Array.isArray(parsed.recipes)) return json({ error: 'The ideas came back garbled. Try again.', stop, head: String(text).slice(0, 300), tail: String(text).slice(-300) }, 502);
