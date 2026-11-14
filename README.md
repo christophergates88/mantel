@@ -13,3 +13,9 @@ carries a security policy (`connect-src 'none'`) so it can't send anything a vis
 
 The fonts are SF Pro Rounded on Apple devices and a self-hosted copy of Nunito elsewhere
 (`assets/fonts`, SIL Open Font License).
+
+## Simmer (`/kitchen`)
+
+A separate, unlisted page: a slow cooker kitchen app for one household (recipes, what's in the house, a shopping
+list priced for Walmart and Ingles). It keeps its data on the phone that opens it. Its photo buttons use the small
+server in `/kitchen-worker`; see the README there.

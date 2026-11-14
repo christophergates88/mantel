@@ -1,0 +1,10 @@
+{
+  "name": "simmer-reader",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "ai": { "binding": "AI" },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://askcason.com,https://www.askcason.com,https://christophergates88.github.io",
+    "MAX_READS_PER_DAY": "40"
+  }
+}
