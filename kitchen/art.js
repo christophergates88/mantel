@@ -28,6 +28,20 @@ const ART = {
   'sweet-potato-sticks': { base: '#efe9dd', bits: [['stick', '#e0742a', 14]] },
   'yogurt-drops':     { base: '#efe9dd', bits: [['disc', '#d9b3d6', 16, 4.2], ['disc', '#f8f3ee', 9, 4.2]] },
   'applesauce':       { base: '#e2c27c', bits: [['shred', '#eed59a', 16], ['dot', '#9a6a3a', 14, 1]] },
+  'fajita-bowls':     { base: '#efe6cf', bits: [['shred', '#c98f4e', 26], ['stick', '#c8402a', 5], ['stick', '#e0a12a', 4], ['stick', '#5f8f45', 4], ['wedge', '#a9c653', 1]] },
+  'tuscan-chicken':   { base: '#c9643a', bits: [['chunk', '#dba757', 5, 12], ['bean', '#fbf5e3', 12], ['leaf', '#3f6d3a', 8, 8]] },
+  'sweet-potato-chili': { base: '#7a2d1c', bits: [['chunk', '#5e3020', 7, 9], ['cube', '#e0742a', 8], ['leaf', '#5c8a40', 3]] },
+  'verde-pork':       { base: '#8a8f3a', bits: [['shred', '#c9a468', 44], ['shred', '#8b6a3a', 14], ['wedge', '#a9c653', 1], ['leaf', '#4f7f3c', 6]] },
+  'turkey-taco':      { base: '#8a3a22', bits: [['chunk', '#c39a6e', 16, 4.5], ['bean', '#2b1d1a', 9], ['dot', '#f1c737', 20, 2.4], ['leaf', '#5c8a40', 4]] },
+  'cacciatore':       { base: '#b5341f', bits: [['chunk', '#dba757', 4, 15], ['stick', '#e0532a', 5], ['stick', '#5f8f45', 4], ['leaf', '#3f7a3a', 5, 6]] },
+  'pork-loin':        { base: '#efe9dd', bits: [['slice', '#edd3b4', 5], ['potato', '#e6cd8f', 5], ['coin', '#e2812f', 7], ['leaf', '#55793f', 4]] },
+  'italian-beef':     { base: '#7a3320', bits: [['shred', '#7d4729', 44], ['shred', '#4a2a1a', 16], ['leaf', '#55793f', 6]] },
+  'peanut-chicken':   { base: '#c98f45', bits: [['chunk', '#f0dcae', 6, 11], ['leaf', '#3f6d3a', 8, 8], ['wedge', '#a9c653', 1]] },
+  'chicken-sp-chili': { base: '#8f3a20', bits: [['shred', '#e2c08f', 24], ['bean', '#2b1d1a', 12], ['cube', '#e0742a', 7], ['leaf', '#5c8a40', 4]] },
+  'apple-oat-squares': { base: '#efe9dd', bits: [['bar', '#c99a62', 6]] },
+  'turkey-patties':   { base: '#efe9dd', bits: [['disc', '#a9703f', 6, 11]] },
+  'blueberry-bars':   { base: '#efe9dd', bits: [['bar', '#b98f5a', 6], ['dot', '#3d4a85', 10, 2.2]] },
+  'bean-quesadillas': { base: '#efe9dd', bits: [['tri', '#e3c27a', 7]] },
   'pork-apples':      { base: '#efe9dd', bits: [['slice', '#eccaa8', 5], ['cube', '#e0742a', 7], ['crescent', '#f3e6b6', 5]] },
 };
 
@@ -58,15 +72,17 @@ function bit(kind, color, x, y, a, s, r) {
     case 'slice': return `<g ${t}><ellipse rx="15" ry="8.5" fill="${color}" stroke="${shade(color, .62)}" stroke-width="1.6"/><path d="M-8 -2Q0 -5 8 -2" stroke="${light}" stroke-width="1.2" fill="none" opacity=".8"/></g>`;
     case 'disc': return `<g transform="translate(${f(x)} ${f(y)})"><circle r="${f(s)}" fill="${color}" stroke="${dark}" stroke-width="1"/><path d="M${f(-s * .55)} ${f(-s * .25)}A${f(s * .65)} ${f(s * .65)} 0 0 1 ${f(s * .3)} ${f(-s * .6)}" stroke="${light}" stroke-width="${f(Math.max(1, s * .16))}" fill="none" stroke-linecap="round" opacity=".75"/></g>`;
     case 'bar': return `<g ${t}><rect x="-13" y="-5.5" width="26" height="11" rx="2.5" fill="${color}" stroke="${dark}" stroke-width="1"/><path d="M-9 -2H7" stroke="${light}" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></g>`;
+    case 'tri': return `<g ${t}><path d="M-12 8L12 8L0 -11Z" fill="${color}" stroke="${dark}" stroke-width="1" stroke-linejoin="round"/><path d="M-5 4H5M-2 -1H2" stroke="${dark}" stroke-width="1.2" stroke-linecap="round" opacity=".5"/></g>`;
     case 'crescent': return `<g ${t}><path d="M-10 2A10.5 10.5 0 0 1 10 2Q0 -3 -10 2Z" fill="${color}" stroke="#b33a2c" stroke-width="1.6" stroke-linejoin="round"/></g>`;
   }
   return '';
 }
 
 const cache = {};
-export function dish(id, name = '') {
+export const LOOKS = Object.keys(ART);
+export function dish(id, name = '', look = '') {
   if (cache[id]) return cache[id];
-  const art = ART[id] || { base: '#8a5a34', bits: [['chunk', '#74432a', 6, 10], ['leaf', '#55793f', 5]] };
+  const art = ART[id] || ART[look] || { base: '#8a5a34', bits: [['chunk', '#74432a', 6, 10], ['leaf', '#55793f', 5]] };
   const rand = rng(id);
   const cx = 100, cy = 76, R = 47;
   let grain = '';

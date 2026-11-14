@@ -207,3 +207,19 @@ main { max-width: 30rem; margin: 0 auto; padding: 1.25rem 1.25rem 0; outline: no
 .acts.two { margin-top: 1rem; }
 .acts.two .btn { flex: 1 1 9rem; }
 .little + .little { margin-top: .6rem; }
+.hero > .panel:first-child { border-top: 0; padding-top: 1.6rem; }
+.thumb svg { display: block; width: 100%; height: 100%; }
+.tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .3rem; }
+.tags i { font-style: normal; font-size: .75rem; font-weight: 600; line-height: 1.5; padding: 0 .5rem; border-radius: 999px; background: #F0E6CF; color: var(--brass-deep); }
+.loved { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; }
+.loved .btn { flex: 1 1 9rem; }
+.rate { display: flex; }
+.rate button { width: 2.6rem; height: 2.75rem; text-align: center; font-size: 1.7rem; line-height: 1; color: #D8CDB8; }
+.rate button[aria-pressed="true"] { color: var(--brass); }
+.acts.quick { margin-top: 1rem; }
+.acts.quick .btn { flex: 1 1 6rem; padding-left: .5rem; padding-right: .5rem; }
+.acts.quick .btn[aria-current] { background: var(--ink); color: var(--paper); }
+.btn.spin { background: var(--brass); color: var(--ink); margin: .2rem 0 .9rem; }
+.btn.ideas { margin: 1.25rem 0 0; }
+.link.drop { display: block; margin-top: 1.5rem; color: #8C3B2A; }
+.sheet h3 + .btn.wide { margin-top: 0; }

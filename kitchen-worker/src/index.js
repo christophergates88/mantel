@@ -2,6 +2,8 @@
 //
 // POST /read  { kind: "pantry" | "receipt", images: [base64 JPEG, up to 4], catalog: [{ id, name }] }
 //   → { items: [{ id | null, name, price | null }], store: "w" | "i" | null }
+// POST /ideas { kind, catalog, have, avoid, loved, looks } → { recipes: [...] } three new recipes written to the house rules
+// GET|PUT /house/<code> → the household's shared kitchen document
 // GET /health → { ok, reader }
 //
 // Photos are passed straight to the model and never stored. With the secret ANTHROPIC_API_KEY set it uses Claude;
@@ -55,7 +57,7 @@ export default {
       }
       if (request.method === 'PUT') {
         const text = await request.text();
-        if (text.length > 60000) return json({ error: 'too large' }, 413);
+        if (text.length > 300000) return json({ error: 'too large' }, 413);
         let doc;
         try { doc = JSON.parse(text); } catch { return json({ error: 'bad request' }, 400); }
         if (!doc || typeof doc !== 'object' || typeof doc.updatedAt !== 'number') return json({ error: 'bad request' }, 400);
@@ -65,6 +67,11 @@ export default {
         return json({ ok: true });
       }
       return json({ error: 'not found' }, 404);
+    }
+
+    if (request.method === 'POST' && url.pathname === '/ideas') {
+      if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
+      return ideas(request, env, json);
     }
 
     if (request.method !== 'POST' || url.pathname !== '/read') return json({ error: 'not found' }, 404);
@@ -96,7 +103,7 @@ export default {
 
     let text;
     try {
-      text = env.ANTHROPIC_API_KEY ? await askClaude(env, kind, images, catalog) : await askWorkersAI(env, kind, images, catalog);
+      text = await ask(env, PROMPT(kind, catalog), images);
     } catch (e) {
       return json({ error: 'The photo reader is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502);
     }
@@ -120,35 +127,124 @@ export default {
   },
 };
 
-async function askClaude(env, kind, images, catalog) {
-  const res = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({
-      model: env.MODEL || 'claude-haiku-5-5',
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: [
-        ...images.map(data => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
-        { type: 'text', text: PROMPT(kind, catalog) },
-      ] }],
-    }),
-  });
-  if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
-  const data = await res.json();
-  return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
-}
-
-async function askWorkersAI(env, kind, images, catalog) {
-  if (!env.AI) throw new Error('no reader configured');
+// One question to the model, with optional photos. Claude when a key is set, otherwise Workers AI.
+async function ask(env, prompt, images = [], maxTokens = 3000) {
+  if (env.ANTHROPIC_API_KEY) {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: env.MODEL || 'claude-haiku-5-5',
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: [
+          ...images.map(data => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
+          { type: 'text', text: prompt },
+        ] }],
+      }),
+    });
+    if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
+    const data = await res.json();
+    return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
+  }
+  if (!env.AI) throw new Error('no model configured');
   const out = await env.AI.run(env.CF_VISION_MODEL || '@cf/mistralai/mistral-small-3.1-24b-instruct', {
-    max_tokens: 3000,
-    messages: [{ role: 'user', content: [
-      { type: 'text', text: PROMPT(kind, catalog) },
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: images.length ? [
+      { type: 'text', text: prompt },
       ...images.map(data => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${data}` } })),
-    ] }],
+    ] : prompt }],
   });
   const text = out?.response ?? out?.choices?.[0]?.message?.content ?? '';
   return typeof text === 'string' ? text : JSON.stringify(text);
+}
+
+// ---------------------------------------------------------------- new recipe ideas
+
+const SECTIONS = ['Meat', 'Produce', 'Cans and jars', 'Dairy and frozen', 'Grains'];
+const str = (v, max) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+const num = (v, lo, hi, dflt) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt; };
+
+const RULES = `House rules, all of them required:
+- Healthy, built on whole foods. NO added sugar of any kind: no sugar, honey, maple syrup, agave, and nothing that usually contains it (barbecue sauce, ketchup, teriyaki, sweetened yogurt, seasoning packets, canned soup).
+- Low prep: 10 minutes of hands-on work at most. No browning or pre-cooking, except ground meat may be browned for 5 minutes.
+- Few ingredients: 4 to 8 in total, counting spices. Ordinary things an American supermarket (Walmart) sells. Prefer what the family already has.
+- A 17-month-old eats this too: mild, no whole nuts, no honey, nothing hard or round that is a choking risk, easy on the salt.
+- Plain American home cooking. Short, plain names (no brand names, no "healthy" or "easy" in the name).`;
+
+function ideaPrompt(kind, catalog, have, avoid, loved, looks) {
+  const dinner = kind === 'dinner';
+  return `Write 3 new ${dinner ? 'slow cooker dinner' : kind === 'breakfast' ? 'make-ahead toddler breakfast' : 'make-ahead toddler snack'} recipes for a family.
+
+${RULES}
+${dinner
+  ? `- Slow cooker on LOW, 5 to 9 hours. At least 28 grams of protein a serving. Thick, never soupy or watery. Food-safe: meat goes in thawed, canned beans only (never dry kidney beans), dairy and spinach are stirred in at the end.`
+  : `- Made in one batch on the weekend in the oven, on the stovetop, in the slow cooker or with no cooking, then kept in the fridge or freezer for the week. Soft enough for a toddler. Eggs and meat fully cooked.`}
+
+Ingredients the app already knows (id = name). Use these ids whenever the food matches:
+${catalog.map(c => `${c.id} = ${c.name}`).join('\n')}
+
+In the kitchen right now: ${have.join(', ') || 'only spices'}.
+${loved.length ? `The family loved: ${loved.join('; ')}. Lean toward that kind of food.` : ''}
+They already have these recipes, so write something clearly different: ${avoid.join('; ')}.
+
+For each recipe pick "look": the id of the existing dish it would most resemble on a plate, from: ${looks.map(l => `${l.id} (${l.name})`).join(', ')}.
+
+Reply with ONLY this JSON, no other words:
+{"recipes":[{"name":"","blurb":"one or two short sentences on why it is good",${dinner ? '"hours":6,"serves":6,"protein":30' : '"method":"Oven, 350°F, 20 minutes","makes":"12 muffins","keeps":"Fridge 4 days. Freezer 2 months."'},"ings":[{"id":"catalog id or null","name":"plain ingredient name","amount":"how much goes in, e.g. 2 lb or 1 can, drained","packs":1,"section":"Meat | Produce | Cans and jars | Dairy and frozen | Grains","buy":"the package you buy, e.g. 15 oz can","walmart":1.25,"ingles":1.59}],"steps":["2 to 4 short steps with temperatures and times"],"little":"one sentence on how to serve it to the toddler","look":""}]}
+"walmart" and "ingles" are typical US dollar prices for that package (Ingles runs a little higher). "packs" is how many packages the recipe needs.`;
+}
+
+async function ideas(request, env, json) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'bad request' }, 400); }
+  const kind = ['dinner', 'breakfast', 'snack'].includes(body.kind) ? body.kind : 'dinner';
+  const catalog = (Array.isArray(body.catalog) ? body.catalog : []).slice(0, 160)
+    .map(c => ({ id: str(c.id, 40).replace(/[^A-Za-z0-9_]/g, ''), name: str(c.name, 60) })).filter(c => c.id && c.name);
+  const known = new Map(catalog.map(c => [c.id, c.name]));
+  const have = (Array.isArray(body.have) ? body.have : []).slice(0, 80).map(id => known.get(str(id, 40))).filter(Boolean);
+  const names = list => (Array.isArray(list) ? list : []).slice(0, 80).map(n => str(n, 60)).filter(Boolean);
+  const looks = (Array.isArray(body.looks) ? body.looks : []).slice(0, 60)
+    .map(l => ({ id: str(l.id, 40).replace(/[^a-z0-9-]/g, ''), name: str(l.name, 60) })).filter(l => l.id && l.name);
+  if (!catalog.length || !looks.length) return json({ error: 'bad request' }, 400);
+
+  const cap = parseInt(env.MAX_IDEAS_PER_DAY || '40', 10);
+  const day = new Date().toISOString().slice(0, 10);
+  if (env.SIMMER_KV) {
+    const used = parseInt((await env.SIMMER_KV.get(`ideas:${day}`)) || '0', 10);
+    if (used >= cap) return json({ error: "Today's limit for new ideas is used up. It resets tomorrow." }, 429);
+    await env.SIMMER_KV.put(`ideas:${day}`, String(used + 1), { expirationTtl: 172800 });
+  }
+
+  let text;
+  try { text = await ask(env, ideaPrompt(kind, catalog, have, names(body.avoid), names(body.loved).slice(0, 12), looks), [], 3500); }
+  catch (e) { return json({ error: 'The recipe writer is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502); }
+  const parsed = extractJSON(text);
+  if (!parsed || !Array.isArray(parsed.recipes)) return json({ error: 'The ideas came back garbled. Try again.' }, 502);
+
+  const sweet = /\b(sugar|honey|maple|agave|syrup|molasses|ketchup|barbecue|bbq|teriyaki)\b/i;
+  const lookIds = new Set(looks.map(l => l.id));
+  const recipes = [];
+  for (const r of parsed.recipes.slice(0, 3)) {
+    const ings = (Array.isArray(r.ings) ? r.ings : []).slice(0, 10).map(g => {
+      const id = known.has(g.id) ? g.id : null;
+      const walmart = Math.round(num(g.walmart, 0.25, 40, 2.5) * 100) / 100;
+      return {
+        id, name: id ? known.get(id) : str(g.name, 40), amount: str(g.amount, 40) || 'to taste', packs: Math.round(num(g.packs, 1, 4, 1)),
+        section: SECTIONS.includes(g.section) ? g.section : 'Cans and jars', buy: str(g.buy, 30) || 'each',
+        walmart, ingles: Math.round(Math.max(walmart, num(g.ingles, 0.25, 50, walmart * 1.25)) * 100) / 100,
+      };
+    }).filter(g => g.name);
+    const steps = (Array.isArray(r.steps) ? r.steps : []).slice(0, 5).map(t => str(t, 240)).filter(Boolean);
+    const name = str(r.name, 60);
+    if (!name || ings.length < 2 || steps.length < 2) continue;
+    if (ings.some(g => !g.id && sweet.test(g.name)) || sweet.test(name)) continue; // breaks the no-sugar rule
+    const base = { name, blurb: str(r.blurb, 200), ings, steps, little: str(r.little, 200) || 'Cut small and let it cool.', look: lookIds.has(r.look) ? r.look : looks[0].id };
+    recipes.push(kind === 'dinner'
+      ? { ...base, hours: Math.round(num(r.hours, 4, 10, 6)), serves: Math.round(num(r.serves, 2, 10, 6)), protein: Math.round(num(r.protein, 5, 70, 30)) }
+      : { ...base, method: str(r.method, 60) || 'Oven', makes: str(r.makes, 40) || 'one batch', keeps: str(r.keeps, 120) || 'Fridge 3 days. Freezer 2 months.' });
+  }
+  if (!recipes.length) return json({ error: 'Nothing usable came back. Try again.' }, 502);
+  return json({ recipes });
 }
 
 function extractJSON(text) {
