@@ -169,11 +169,12 @@ function homeView() {
   <h2 class="shelf">The week</h2>
   <ul class="days">${week().map(d => {
     const p = recipe(state.plan[d.key]);
-    return `<li><button class="day" data-pick="${d.key}">
-      <span class="dn">${dayName(d)}</span>
-      ${p ? `<span class="thumb">${dish(p.id, p.name)}</span><span class="meal">${esc(p.name)}<small>${missing(p).length ? missing(p).length + ' to buy' : 'ready to cook'}</small></span>`
-          : `<span class="thumb empty"></span><span class="meal none">Add a meal</span>`}
-    </button></li>`; }).join('')}</ul>
+    return p
+      ? `<li class="dayrow"><button class="day" data-open="${p.id}" aria-label="${dayName(d)}: ${esc(p.name)}. Open the recipe.">
+          <span class="dn">${dayName(d)}</span><span class="thumb">${dish(p.id, p.name)}</span>
+          <span class="meal">${esc(p.name)}<small>${missing(p).length ? missing(p).length + ' to buy' : 'ready to cook'}</small></span></button>
+          <button class="swap" data-pick="${d.key}" aria-label="Change dinner for ${dayName(d)}">Change</button></li>`
+      : `<li><button class="day" data-pick="${d.key}"><span class="dn">${dayName(d)}</span><span class="thumb empty"></span><span class="meal none">Add a meal</span></button></li>`; }).join('')}</ul>
   ${shop.items.length ? `<button class="btn wide" data-tab="list">${shop.items.length} ${shop.items.length === 1 ? 'thing' : 'things'} to buy, about ${money(Math.min(shop.w, shop.i))}</button>` : ''}
 
   <h2 class="shelf">Stock the kitchen</h2>

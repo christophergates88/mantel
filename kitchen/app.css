@@ -197,3 +197,6 @@ main { max-width: 30rem; margin: 0 auto; padding: 1.25rem 1.25rem 0; outline: no
   .toast { transition: none; }
 }
 .count[hidden], [hidden] { display: none !important; }
+.dayrow { display: flex; align-items: center; }
+.dayrow .day { flex: 1; min-width: 0; padding-right: .25rem; }
+.swap { flex: none; min-height: 2.75rem; padding: 0 .9rem 0 .5rem; font-size: .875rem; font-weight: 600; color: var(--fern); text-decoration: underline; text-underline-offset: 3px; }
