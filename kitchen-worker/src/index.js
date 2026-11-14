@@ -171,7 +171,7 @@ async function write(env, prompt, maxTokens) {
   });
   if (!res.ok) throw new Error(`model service ${res.status}: ${(await res.text()).slice(0, 150)}`);
   const data = await res.json();
-  return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model };
+  return { text: (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n'), model, stop: data.stop_reason };
 }
 
 // ---------------------------------------------------------------- new recipe ideas
@@ -239,12 +239,12 @@ async function ideas(request, env, json) {
   }
 
   let text;
-  let model = '';
+  let model = '', stop = '';
   const avoid = names(body.avoid);
-  try { ({ text, model } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 3500)); }
+  try { ({ text, model, stop } = await write(env, ideaPrompt(kind, catalog, have, avoid, names(body.loved).slice(0, 12), looks), 8000)); }
   catch (e) { return json({ error: 'The recipe writer is having trouble. Try again in a minute.', detail: String(e.message || e).slice(0, 200) }, 502); }
   const parsed = extractJSON(text);
-  if (!parsed || !Array.isArray(parsed.recipes)) return json({ error: 'The ideas came back garbled. Try again.' }, 502);
+  if (!parsed || !Array.isArray(parsed.recipes)) return json({ error: 'The ideas came back garbled. Try again.', stop, head: String(text).slice(0, 300), tail: String(text).slice(-300) }, 502);
 
   const sweet = /\b(sugar|honey|maple|agave|syrup|molasses|ketchup|barbecue|bbq|teriyaki)\b/i;
   const lookIds = new Set(looks.map(l => l.id));
