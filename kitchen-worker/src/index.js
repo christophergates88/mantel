@@ -163,7 +163,7 @@ async function ask(env, prompt, images = [], maxTokens = 3000) {
 // recipes that were not good enough to cook from (wrong methods, and one unsafe way of cooking chicken for a toddler).
 async function write(env, prompt, maxTokens) {
   if (!env.ANTHROPIC_API_KEY) throw new Error('no writer configured');
-  const model = env.IDEAS_MODEL || env.MODEL || 'claude-haiku-5-5';
+  const model = env.IDEAS_MODEL || 'claude-sonnet-5-5'; // recipes get the stronger model; photos stay on the cheap one
   // Thinking is switched off so the whole allowance goes to the answer; if the service refuses that setting, ask again without it.
   const call = extra => fetch(ANTHROPIC_URL, {
     method: 'POST',
