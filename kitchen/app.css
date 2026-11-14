@@ -200,3 +200,10 @@ main { max-width: 30rem; margin: 0 auto; padding: 1.25rem 1.25rem 0; outline: no
 .dayrow { display: flex; align-items: center; }
 .dayrow .day { flex: 1; min-width: 0; padding-right: .25rem; }
 .swap { flex: none; min-height: 2.75rem; padding: 0 .9rem 0 .5rem; font-size: .875rem; font-weight: 600; color: var(--fern); text-decoration: underline; text-underline-offset: 3px; }
+.seg { display: flex; background: #E9E1D2; border-radius: 12px; padding: 3px; margin-bottom: 1rem; }
+.seg button { flex: 1; text-align: center; min-height: 2.75rem; padding: .3rem .25rem; border-radius: 10px; font-size: .875rem; line-height: 1.2; color: var(--soft); }
+.seg button[aria-pressed="true"] { background: var(--slate); color: var(--cream); font-weight: 600; }
+.day.prep { grid-template-columns: 3rem 1fr; }
+.acts.two { margin-top: 1rem; }
+.acts.two .btn { flex: 1 1 9rem; }
+.little + .little { margin-top: .6rem; }

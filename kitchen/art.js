@@ -16,6 +16,18 @@ const ART = {
   'coconut-chicken':  { base: '#e3ad44', bits: [['cube', '#e0742a', 8], ['chunk', '#f3dfb4', 6, 10], ['leaf', '#3f6d3a', 8, 9]] },
   'turkey-breast':    { base: '#efe9dd', bits: [['slice', '#efd9b2', 5], ['coin', '#e2812f', 8], ['leaf', '#55793f', 5]] },
   'chicken-marinara': { base: '#b5341f', bits: [['chunk', '#e8c690', 4, 14], ['melt', '#f8eed2', 5], ['leaf', '#3f7a3a', 6, 7]] },
+  'banana-pancakes':  { base: '#efe9dd', bits: [['disc', '#d9a55b', 6, 13], ['dot', '#3d4a85', 6, 2.6]] },
+  'egg-cups':         { base: '#efe9dd', bits: [['disc', '#f0cf62', 6, 12], ['leaf', '#3f6d3a', 9, 4]] },
+  'oat-cups':         { base: '#efe9dd', bits: [['disc', '#c99a62', 6, 12], ['dot', '#3d4a85', 14, 2.4]] },
+  'french-toast':     { base: '#efe9dd', bits: [['bar', '#dba24e', 8]] },
+  'yogurt-muffins':   { base: '#efe9dd', bits: [['disc', '#d8b06e', 8, 9.5]] },
+  'oat-cookies':      { base: '#efe9dd', bits: [['disc', '#c9a36b', 7, 10.5], ['dot', '#8a6a3a', 22, 1.2]] },
+  'pb-bars':          { base: '#efe9dd', bits: [['bar', '#b98545', 7]] },
+  'turkey-meatballs': { base: '#efe9dd', bits: [['disc', '#a9703f', 10, 7.5], ['leaf', '#55793f', 4]] },
+  'broccoli-bites':   { base: '#efe9dd', bits: [['disc', '#a3b962', 8, 9], ['dot', '#4f7f3c', 20, 1.6]] },
+  'sweet-potato-sticks': { base: '#efe9dd', bits: [['stick', '#e0742a', 14]] },
+  'yogurt-drops':     { base: '#efe9dd', bits: [['disc', '#d9b3d6', 16, 4.2], ['disc', '#f8f3ee', 9, 4.2]] },
+  'applesauce':       { base: '#e2c27c', bits: [['shred', '#eed59a', 16], ['dot', '#9a6a3a', 14, 1]] },
   'pork-apples':      { base: '#efe9dd', bits: [['slice', '#eccaa8', 5], ['cube', '#e0742a', 7], ['crescent', '#f3e6b6', 5]] },
 };
 
@@ -44,6 +56,8 @@ function bit(kind, color, x, y, a, s, r) {
     case 'dollop': return `<g transform="translate(${f(x)} ${f(y)})"><path d="M-11 1Q-12 -8 -2 -9Q9 -11 11 -1Q12 8 1 9Q-9 10 -11 1Z" fill="${color}" stroke="#e2d9c4" stroke-width=".8"/><path d="M-5 -1Q-1 -6 4 -2" stroke="#e9e1cf" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>`;
     case 'melt': return `<path ${t} d="M-12 0Q-13 -8 -3 -8Q3 -12 9 -6Q15 -2 10 5Q5 11 -3 8Q-11 9 -12 0Z" fill="${color}" stroke="#e6d6ad" stroke-width=".8" opacity=".95"/>`;
     case 'slice': return `<g ${t}><ellipse rx="15" ry="8.5" fill="${color}" stroke="${shade(color, .62)}" stroke-width="1.6"/><path d="M-8 -2Q0 -5 8 -2" stroke="${light}" stroke-width="1.2" fill="none" opacity=".8"/></g>`;
+    case 'disc': return `<g transform="translate(${f(x)} ${f(y)})"><circle r="${f(s)}" fill="${color}" stroke="${dark}" stroke-width="1"/><path d="M${f(-s * .55)} ${f(-s * .25)}A${f(s * .65)} ${f(s * .65)} 0 0 1 ${f(s * .3)} ${f(-s * .6)}" stroke="${light}" stroke-width="${f(Math.max(1, s * .16))}" fill="none" stroke-linecap="round" opacity=".75"/></g>`;
+    case 'bar': return `<g ${t}><rect x="-13" y="-5.5" width="26" height="11" rx="2.5" fill="${color}" stroke="${dark}" stroke-width="1"/><path d="M-9 -2H7" stroke="${light}" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></g>`;
     case 'crescent': return `<g ${t}><path d="M-10 2A10.5 10.5 0 0 1 10 2Q0 -3 -10 2Z" fill="${color}" stroke="#b33a2c" stroke-width="1.6" stroke-linejoin="round"/></g>`;
   }
   return '';

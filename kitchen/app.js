@@ -10,6 +10,8 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const money = n => '$' + n.toFixed(2);
 const cat = id => { const c = CATALOG[id]; return { id, name: c[0], section: c[1], w: c[2], i: c[3], buy: c[4], staple: !!c[5] }; };
 const recipe = id => RECIPES.find(r => r.id === id);
+const DINNERS = RECIPES.filter(r => !r.kind);
+const KID = 'Cason';
 
 // ---------------------------------------------------------------- dates and times
 
@@ -29,7 +31,7 @@ function dinnerAt() {
 
 // ---------------------------------------------------------------- state
 
-const SHARED = ['have', 'extra', 'plan', 'prices', 'dinner', 'cooking', 'updatedAt'];
+const SHARED = ['have', 'extra', 'plan', 'prep', 'stash', 'prices', 'dinner', 'cooking', 'updatedAt'];
 function newCode() {
   const a = new Uint8Array(20); crypto.getRandomValues(a);
   return [...a].map(n => 'abcdefghjkmnpqrstuvwxyz23456789'[n % 31]).join('');
@@ -37,7 +39,7 @@ function newCode() {
 function fresh() {
   const have = {};
   for (const id in CATALOG) if (CATALOG[id][5]) have[id] = true; // the spice shelf starts stocked
-  return { have, extra: [], plan: {}, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
+  return { have, extra: [], plan: {}, prep: [], stash: {}, prices: {}, dinner: '17:30', cooking: null, house: newCode(), updatedAt: 0 };
 }
 function load() {
   try {
@@ -54,7 +56,13 @@ function load() {
 }
 let state = { dinner: '17:30' };
 state = load();
-for (const k of Object.keys(state.plan)) if (k < today() || !recipe(state.plan[k])) delete state.plan[k];
+function tidy() {
+  for (const k of Object.keys(state.plan || {})) if (k < today() || !recipe(state.plan[k]) || recipe(state.plan[k]).kind) delete state.plan[k];
+  state.prep = (state.prep || []).filter(id => recipe(id)?.kind);
+  state.stash = state.stash || {};
+  for (const id of Object.keys(state.stash)) if (!recipe(id)) delete state.stash[id];
+}
+tidy();
 
 const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* still works for this visit */ } };
 let pushTimer;
@@ -70,6 +78,7 @@ function save() {
 const shared = () => Object.fromEntries(SHARED.map(k => [k, state[k]]));
 function adopt(doc) {
   for (const k of SHARED) if (k in doc) state[k] = doc[k];
+  tidy();
   keep();
   if ($('#sheet').hidden) render();
 }
@@ -117,6 +126,12 @@ function shopping() {
       need.set(id, cur);
     }
   }
+  for (const id of state.prep) {
+    for (const [iid, , packs = 1] of recipe(id).ings) {
+      if (state.have[iid] || need.has(iid)) continue; // one package covers the weekend baking
+      need.set(iid, { id: iid, packs });
+    }
+  }
   const items = [...need.values()].sort((a, b) => SECTIONS.indexOf(cat(a.id).section) - SECTIONS.indexOf(cat(b.id).section));
   const total = store => items.reduce((sum, it) => sum + price(it.id, store) * it.packs, 0);
   return { items, w: total('w'), i: total('i') };
@@ -126,7 +141,7 @@ function shopping() {
 function suggestion() {
   const hoursLeft = (dinnerAt() - Date.now()) / 36e5;
   const late = r => (r.hours > hoursLeft + 0.25 ? 1 : 0);
-  return [...RECIPES].sort((a, b) => missing(a).length - missing(b).length || late(a) - late(b) || b.protein - a.protein)[0];
+  return [...DINNERS].sort((a, b) => missing(a).length - missing(b).length || late(a) - late(b) || b.protein - a.protein)[0];
 }
 
 function timing(r) {
@@ -177,6 +192,17 @@ function homeView() {
       : `<li><button class="day" data-pick="${d.key}"><span class="dn">${dayName(d)}</span><span class="thumb empty"></span><span class="meal none">Add a meal</span></button></li>`; }).join('')}</ul>
   ${shop.items.length ? `<button class="btn wide" data-tab="list">${shop.items.length} ${shop.items.length === 1 ? 'thing' : 'things'} to buy, about ${money(Math.min(shop.w, shop.i))}</button>` : ''}
 
+  <h2 class="shelf">Weekend prep for ${KID}</h2>
+  ${state.prep.length ? `<ul class="days">${state.prep.map(recipe).map(p => `<li><button class="day prep" data-open="${p.id}">
+      <span class="thumb">${dish(p.id, p.name)}</span><span class="meal">${esc(p.name)}<small>${esc(p.method)}${missing(p).length ? `, ${missing(p).length} to buy` : ', ready to make'}</small></span></button></li>`).join('')}</ul>`
+    : `<p class="note">Pick a few breakfasts and snacks to batch on Saturday or Sunday. What they need goes on the shopping list.</p>`}
+  <button class="btn line wide" data-goto="breakfast">Choose breakfasts and snacks</button>
+  ${Object.keys(state.stash).length ? `<h2 class="shelf">Made and waiting</h2>
+  <ul class="days">${Object.keys(state.stash).map(id => { const p = recipe(id); const made = new Date(state.stash[id] + 'T12:00:00');
+    return `<li class="dayrow"><button class="day prep" data-open="${p.id}"><span class="thumb">${dish(p.id, p.name)}</span>
+      <span class="meal">${esc(p.name)}<small>Made ${made.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}. ${esc(p.keeps)}</small></span></button>
+      <button class="swap" data-gone="${p.id}" aria-label="${esc(p.name)} is all gone">All gone</button></li>`; }).join('')}</ul>` : ''}
+
   <h2 class="shelf">Stock the kitchen</h2>
   <div class="snap">
     <button class="btn" data-snap="pantry">Photograph the fridge or pantry</button>
@@ -196,19 +222,30 @@ function recipeRow(r, attr) {
   return `<li><button class="card" ${attr}>
     <span class="thumb">${dish(r.id, r.name)}</span>
     <span class="txt"><span class="name">${esc(r.name)}</span>
-      <span class="meta">${r.hours} hrs on low, about ${r.protein} g protein</span>
+      <span class="meta">${r.kind ? `${r.method}. Makes ${r.makes}` : `${r.hours} hrs on low, about ${r.protein} g protein`}</span>
       <span class="have ${m ? '' : 'ok'}">${m ? `You have ${haveCount(r)} of ${r.ings.length}` : 'You have everything'}</span></span>
   </button></li>`;
 }
 
+let shelfKind = 'dinner';
+const SHELVES = [['dinner', 'Dinners'], ['breakfast', `${KID}'s breakfasts`], ['snack', `${KID}'s snacks`]];
+
 function recipesView() {
-  let list = [...RECIPES];
+  const shelves = `<div class="seg" role="group" aria-label="Kind of recipe">${SHELVES.map(([id, label]) =>
+    `<button data-shelf="${id}" aria-pressed="${shelfKind === id}">${label}</button>`).join('')}</div>`;
+  if (shelfKind !== 'dinner') {
+    const list = RECIPES.filter(r => r.kind === shelfKind);
+    return `${shelves}
+    <p class="note">Make a batch on the weekend and keep it in the fridge or freezer. Nothing here has added sugar.</p>
+    <ul class="cards">${list.map(r => recipeRow(r, `data-open="${r.id}"`)).join('')}</ul>`;
+  }
+  let list = [...DINNERS];
   if (filter === 'allday') list = list.filter(r => r.hours >= 8);
   if (filter === 'ready') list = list.filter(r => !missing(r).length);
   if (filter === 'protein') list.sort((a, b) => b.protein - a.protein);
   if (filter === 'few') list.sort((a, b) => a.ings.length - b.ings.length);
-  return `
-  <div class="chips" role="group" aria-label="Filter recipes">
+  return `${shelves}
+  <div class="chips" role="group" aria-label="Filter dinners">
     ${FILTERS.map(([id, label]) => `<button class="chip" data-filter="${id}" aria-pressed="${filter === id}">${label}</button>`).join('')}
   </div>
   ${list.length ? `<ul class="cards">${list.map(r => recipeRow(r, `data-open="${r.id}"`)).join('')}</ul>`
@@ -237,8 +274,8 @@ function kitchenView() {
 
 function listView() {
   const shop = shopping();
-  if (!Object.keys(state.plan).length) return `<p class="note">Plan a few dinners on the Tonight screen and what you need shows up here, priced for Walmart and Ingles.</p>`;
-  if (!shop.items.length) return `<p class="note">Nothing to buy. Everything for this week's dinners is in the kitchen.</p>`;
+  if (!Object.keys(state.plan).length && !state.prep.length) return `<p class="note">Plan a few dinners on the Tonight screen and what you need shows up here, priced for Walmart and Ingles.</p>`;
+  if (!shop.items.length) return `<p class="note">Nothing to buy. Everything for this week is in the kitchen.</p>`;
   const cheaper = shop.w <= shop.i ? 'Walmart' : 'Ingles';
   return `
   <div class="verdict">
@@ -266,7 +303,7 @@ function render() {
   const views = { home: homeView, recipes: recipesView, kitchen: kitchenView, list: listView };
   $('#view').innerHTML = views[tab]();
   const subs = { home: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
-                 recipes: `${RECIPES.length} slow cooker suppers, no sugar added`, kitchen: 'What is in the house', list: 'What to buy, and where' };
+                 recipes: `${DINNERS.length} suppers, ${RECIPES.length - DINNERS.length} breakfasts and snacks`, kitchen: 'What is in the house', list: 'What to buy, and where' };
   $('#sub').textContent = subs[tab];
   document.querySelectorAll('.tabs button').forEach(b => {
     if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
@@ -294,8 +331,35 @@ function closeSheet() {
 }
 const closer = `<button class="close" data-close aria-label="Close">Close</button>`;
 
+function ingList(r) {
+  return `<h3>What goes in</h3>
+  <ul class="ings">${r.ings.map(([iid, amt]) => `<li class="${state.have[iid] ? 'got' : 'need'}">
+    <span>${esc(CATALOG[iid][0])}<small>${esc(amt)}</small></span>
+    <button class="flip" data-ing="${iid}" data-rid="${r.id}" aria-label="${esc(CATALOG[iid][0])}: ${state.have[iid] ? 'have it. Tap if you do not' : 'need it. Tap if you have it'}">${state.have[iid] ? 'have' : 'need'}</button></li>`).join('')}</ul>
+  <p class="safe">Tap have or need to correct it.</p>
+  <h3>How</h3>
+  <ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`;
+}
+
+function prepSheet(r) {
+  const on = state.prep.includes(r.id), made = state.stash[r.id];
+  openSheet(`${closer}
+  <div class="art">${dish(r.id, r.name)}</div>
+  <h2 id="sheetTitle">${esc(r.name)}</h2>
+  <p class="facts">${esc(r.method)}. Makes ${esc(r.makes)}.</p>
+  <p class="blurb">${esc(r.blurb)}</p>
+  <div class="acts two">
+    <button class="btn ${on ? 'line' : ''}" data-prep="${r.id}">${on ? 'Take off weekend prep' : 'Add to weekend prep'}</button>
+    <button class="btn line" data-made="${r.id}">${made ? 'Made another batch' : 'I made a batch'}</button>
+  </div>
+  ${ingList(r)}
+  <p class="little"><b>Keeping it.</b> ${esc(r.keeps)} Cool completely before it goes in a bag or box.</p>
+  <p class="little"><b>For ${KID}.</b> ${esc(r.little)}</p>`);
+}
+
 function recipeSheet(id) {
   const r = recipe(id);
+  if (r.kind) return prepSheet(r);
   openSheet(`${closer}
   <div class="art">${dish(r.id, r.name)}</div>
   <h2 id="sheetTitle">${esc(r.name)}</h2>
@@ -303,21 +367,15 @@ function recipeSheet(id) {
   <p class="blurb">${esc(r.blurb)}</p>
   <h3>Cook it on</h3>
   <div class="chips wrap">${week().map(d => `<button class="chip" data-plan="${d.key}" data-id="${r.id}" aria-pressed="${state.plan[d.key] === r.id}">${d.i < 2 ? dayName(d) : d.date.toLocaleDateString('en-US', { weekday: 'short' })}</button>`).join('')}</div>
-  <h3>What goes in</h3>
-  <ul class="ings">${r.ings.map(([iid, amt]) => `<li class="${state.have[iid] ? 'got' : 'need'}">
-    <span>${esc(CATALOG[iid][0])}<small>${esc(amt)}</small></span>
-    <button class="flip" data-ing="${iid}" data-rid="${r.id}" aria-label="${esc(CATALOG[iid][0])}: ${state.have[iid] ? 'have it. Tap if you do not' : 'need it. Tap if you have it'}">${state.have[iid] ? 'have' : 'need'}</button></li>`).join('')}</ul>
-  <p class="safe">Tap have or need to correct it.</p>
-  <h3>How</h3>
-  <ol class="steps">${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-  <p class="little"><b>For the little one.</b> ${esc(r.little)} Salt the grown-up plates at the table.</p>
+  ${ingList(r)}
+  <p class="little"><b>For ${KID}.</b> ${esc(r.little)} Salt the grown-up plates at the table.</p>
   <p class="safe">Thaw meat before it goes in. ${r.hours >= 8 ? 'Most slow cookers switch to warm on their own, so a long work day is fine.' : 'If you will be out longer than this, set it to switch to warm.'}</p>`);
 }
 
 function pickSheet(key) {
   const d = week().find(x => x.key === key);
   const cur = state.plan[key];
-  const list = [...RECIPES].sort((a, b) => missing(a).length - missing(b).length || b.protein - a.protein);
+  const list = [...DINNERS].sort((a, b) => missing(a).length - missing(b).length || b.protein - a.protein);
   openSheet(`${closer}
   <h2 id="sheetTitle">${d.i === 0 ? 'Dinner tonight' : 'Dinner ' + (d.i === 1 ? 'tomorrow' : 'on ' + dayName(d))}</h2>
   <p class="blurb">Listed with what you can already make first.</p>
@@ -446,6 +504,21 @@ document.addEventListener('click', e => {
   if ('close' in d) return closeSheet();
   if (d.tab) { tab = d.tab; render(); window.scrollTo(0, 0); return; }
   if (d.filter) { filter = d.filter; render(); return; }
+  if (d.shelf) { shelfKind = d.shelf; render(); return; }
+  if (d.goto) { tab = 'recipes'; shelfKind = d.goto; render(); window.scrollTo(0, 0); return; }
+  if (d.prep) {
+    const on = state.prep.includes(d.prep);
+    state.prep = on ? state.prep.filter(x => x !== d.prep) : [...state.prep, d.prep];
+    save(); closeSheet(); render();
+    return toast(on ? 'Taken off weekend prep' : 'Added to weekend prep');
+  }
+  if (d.made) {
+    state.stash[d.made] = today();
+    state.prep = state.prep.filter(x => x !== d.made);
+    save(); closeSheet(); render();
+    return toast('Marked as made today');
+  }
+  if (d.gone) { delete state.stash[d.gone]; save(); return render(); }
   if (d.open) return recipeSheet(d.open);
   if (d.pick) return pickSheet(d.pick);
   if (d.plan) {
