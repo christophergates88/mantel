@@ -31,7 +31,7 @@ export default {
     const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
     const cors = {
       'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0] || 'null',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'content-type',
       'Vary': 'Origin',
     };
@@ -43,6 +43,30 @@ export default {
     if (request.method === 'GET' && url.pathname === '/health') {
       return json({ ok: true, reader: env.ANTHROPIC_API_KEY ? 'claude' : env.AI ? 'workers-ai' : 'none' });
     }
+    // Shared kitchen: one small JSON document per household code, so two phones see the same plan and pantry.
+    const house = url.pathname.match(/^\/house\/([a-z0-9]{16,32})$/);
+    if (house) {
+      if (!allowed.includes(origin)) return json({ error: 'This only answers the Simmer page.' }, 403);
+      if (!env.SIMMER_KV) return json({ error: 'sharing is not set up' }, 503);
+      const key = `house:${house[1]}`;
+      if (request.method === 'GET') {
+        const doc = await env.SIMMER_KV.get(key);
+        return new Response(doc || 'null', { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cors } });
+      }
+      if (request.method === 'PUT') {
+        const text = await request.text();
+        if (text.length > 60000) return json({ error: 'too large' }, 413);
+        let doc;
+        try { doc = JSON.parse(text); } catch { return json({ error: 'bad request' }, 400); }
+        if (!doc || typeof doc !== 'object' || typeof doc.updatedAt !== 'number') return json({ error: 'bad request' }, 400);
+        const cur = JSON.parse((await env.SIMMER_KV.get(key)) || 'null');
+        if (cur && cur.updatedAt > doc.updatedAt) return json({ ok: false, newer: cur });
+        await env.SIMMER_KV.put(key, text);
+        return json({ ok: true });
+      }
+      return json({ error: 'not found' }, 404);
+    }
+
     if (request.method !== 'POST' || url.pathname !== '/read') return json({ error: 'not found' }, 404);
     if (!allowed.includes(origin)) return json({ error: 'This reader only answers the Simmer page.' }, 403);
 
